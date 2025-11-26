@@ -20,6 +20,8 @@ export const useGameStore = defineStore('game', () => {
   const timerIntervals = ref<Map<string, number>>(new Map())
   const gameMode = ref<GameMode>('random')
   const dailyDate = ref<string>('')
+  const username = ref<string>(localStorage.getItem('wordscramble_username') || '')
+  const scoreSubmitted = ref(false)
 
   // Computed
   const lettersLeft = computed(() => letterBag.value.length)
@@ -61,6 +63,7 @@ export const useGameStore = defineStore('game', () => {
     score.value = 0
     wordsPlayed.value = []
     gameOver.value = false
+    scoreSubmitted.value = false
 
     // Clear any existing timers
     timerIntervals.value.forEach(interval => clearInterval(interval))
@@ -263,6 +266,16 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  function setUsername(newUsername: string) {
+    const trimmed = newUsername.trim()
+    username.value = trimmed
+    if (trimmed) {
+      localStorage.setItem('wordscramble_username', trimmed)
+    } else {
+      localStorage.removeItem('wordscramble_username')
+    }
+  }
+
   return {
     // State
     letters,
@@ -273,6 +286,8 @@ export const useGameStore = defineStore('game', () => {
     gameOver,
     gameMode,
     dailyDate,
+    username,
+    scoreSubmitted,
 
     // Computed
     lettersLeft,
@@ -289,5 +304,6 @@ export const useGameStore = defineStore('game', () => {
     shuffleLetters,
     reorderLetters,
     submitWord,
+    setUsername,
   }
 })

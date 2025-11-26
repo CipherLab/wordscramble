@@ -2,23 +2,32 @@
   <div class="game-board">
     <!-- Game Over Overlay -->
     <div v-if="gameStore.gameOver" class="game-over-overlay">
-      <q-card class="game-over-card">
-        <q-card-section class="text-center">
-          <div class="text-h4 q-mb-md">Game Over!</div>
-          <div class="text-h5 q-mb-md">Final Score: {{ gameStore.score }}</div>
-          <div v-if="gameStore.topWord" class="q-mb-md">
-            <div class="text-subtitle1">Top Word</div>
-            <div class="text-h6">{{ gameStore.topWord.word }}</div>
-            <div class="text-caption">{{ gameStore.topWord.points }} points</div>
-          </div>
-          <q-btn
-            color="primary"
-            label="Play Again"
-            size="lg"
-            @click="gameStore.startGame()"
-          />
-        </q-card-section>
-      </q-card>
+      <div class="game-over-container">
+        <q-card class="game-over-card q-mb-md">
+          <q-card-section class="text-center">
+            <div class="text-h4 q-mb-md">Game Over!</div>
+            <div class="text-h5 q-mb-md">Final Score: {{ gameStore.score }}</div>
+            <div v-if="gameStore.topWord" class="q-mb-md">
+              <div class="text-subtitle1">Top Word</div>
+              <div class="text-h6">{{ gameStore.topWord.word }}</div>
+              <div class="text-caption">{{ gameStore.topWord.points }} points</div>
+            </div>
+            <q-btn
+              color="primary"
+              label="Play Again"
+              size="lg"
+              @click="gameStore.startGame()"
+            />
+          </q-card-section>
+        </q-card>
+
+        <!-- Daily Leaderboard -->
+        <DailyLeaderboard
+          v-if="gameStore.gameMode === 'daily' && gameStore.dailyDate"
+          :score="gameStore.score"
+          :date="gameStore.dailyDate"
+        />
+      </div>
     </div>
 
     <!-- Letter Tiles -->
@@ -151,6 +160,7 @@ import { computed, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useGameStore } from '../stores/gameStore'
 import LetterTile from './LetterTile.vue'
+import DailyLeaderboard from './DailyLeaderboard.vue'
 import { getLetterPoints } from '../constants/scrabble'
 
 const $q = useQuasar()
@@ -249,6 +259,13 @@ function handleSubmit() {
   align-items: center
   justify-content: center
   z-index: 1000
+  overflow-y: auto
+  padding: 20px
+
+.game-over-container
+  width: 100%
+  max-width: 600px
+  margin: 0 auto
 
 .game-over-card
   min-width: 300px
