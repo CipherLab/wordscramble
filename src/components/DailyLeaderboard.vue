@@ -65,6 +65,7 @@
           </q-item-section>
           <q-item-section>
             <q-item-label>{{ entry.username }}</q-item-label>
+            <q-item-label v-if="entry.bestWord" caption>{{ entry.bestWord }}</q-item-label>
           </q-item-section>
           <q-item-section side>
             <q-item-label class="text-bold">{{ entry.score }}</q-item-label>
@@ -98,6 +99,7 @@ const props = defineProps<{
   score: number
   date: string
   viewOnly?: boolean
+  bestWord?: string
 }>()
 
 const gameStore = useGameStore()
@@ -147,7 +149,7 @@ async function handleSubmit() {
     gameStore.setUsername(localUsername.value)
 
     // Submit score to Firebase
-    await submitScore(localUsername.value, props.score, props.date)
+    await submitScore(localUsername.value, props.score, props.date, props.bestWord || '')
 
     // Mark as submitted
     gameStore.scoreSubmitted = true

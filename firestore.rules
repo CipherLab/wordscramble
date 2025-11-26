@@ -1,0 +1,26 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /dailyScores/{scoreId} {
+      // Allow anyone to read scores
+      allow read: if true;
+
+      // Allow anyone to create new scores with validation
+      allow create: if request.resource.data.keys().hasAll(['username', 'score', 'date', 'timestamp', 'bestWord'])
+                    && request.resource.data.username is string
+                    && request.resource.data.username.size() > 0
+                    && request.resource.data.username.size() <= 20
+                    && request.resource.data.score is number
+                    && request.resource.data.score >= 0
+                    && request.resource.data.date is string
+                    && request.resource.data.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+                    && request.resource.data.bestWord is string
+                    && request.resource.data.bestWord.size() >= 0
+                    && request.resource.data.bestWord.size() <= 50;
+
+      // Prevent updates and deletes
+      allow update, delete: if false;
+    }
+  }
+}

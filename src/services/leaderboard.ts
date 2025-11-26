@@ -6,6 +6,7 @@ export interface LeaderboardEntry {
   score: number
   date: string
   timestamp: number
+  bestWord: string
 }
 
 export interface LeaderboardStats {
@@ -17,13 +18,14 @@ export interface LeaderboardStats {
 /**
  * Submit a score to the daily leaderboard
  */
-export async function submitScore(username: string, score: number, date: string): Promise<void> {
+export async function submitScore(username: string, score: number, date: string, bestWord: string): Promise<void> {
   try {
     await addDoc(collection(db, 'dailyScores'), {
       username: username.trim(),
       score,
       date, // YYYY-MM-DD format
-      timestamp: Timestamp.now()
+      timestamp: Timestamp.now(),
+      bestWord: bestWord.trim()
     })
     console.log('Score submitted successfully')
   } catch (error) {
@@ -55,7 +57,8 @@ export async function getTopScores(date: string, limitCount = 100): Promise<Lead
         username: data.username,
         score: data.score,
         date: data.date,
-        timestamp: data.timestamp.toMillis()
+        timestamp: data.timestamp.toMillis(),
+        bestWord: data.bestWord || ''
       })
     })
 

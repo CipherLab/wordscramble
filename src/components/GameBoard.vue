@@ -26,6 +26,7 @@
           v-if="gameStore.gameMode === 'daily' && gameStore.dailyDate"
           :score="gameStore.score"
           :date="gameStore.dailyDate"
+          :best-word="gameStore.topWord ? `${gameStore.topWord.word} (${gameStore.topWord.points})` : ''"
         />
       </div>
     </div>
