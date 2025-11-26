@@ -80,14 +80,17 @@ export const useGameStore = defineStore('game', () => {
       // Find the letter index in the array
       const letterIndex = letters.value.findIndex(l => l.id === letter.id)
       if (letterIndex !== -1) {
-        // Decrement the time
-        letters.value[letterIndex].timeLeft--
+        const currentLetter = letters.value[letterIndex]
+        if (currentLetter) {
+          // Decrement the time
+          currentLetter.timeLeft--
 
-        if (letters.value[letterIndex].timeLeft <= 0) {
-          removeLetter(letters.value[letterIndex].id)
-        } else {
-          // Force reactivity by creating a new array reference
-          letters.value = [...letters.value]
+          if (currentLetter.timeLeft <= 0) {
+            removeLetter(currentLetter.id)
+          } else {
+            // Force reactivity by creating a new array reference
+            letters.value = [...letters.value]
+          }
         }
       }
     }, 1000) as unknown as number
@@ -105,11 +108,12 @@ export const useGameStore = defineStore('game', () => {
     const letterIndex = letters.value.findIndex(l => l.id === letterId)
     if (letterIndex !== -1) {
       const letter = letters.value[letterIndex]
-
-      // If letter was selected, remove from selection
-      const selectedIndex = selectedLetters.value.indexOf(letter.letter)
-      if (selectedIndex !== -1) {
-        selectedLetters.value.splice(selectedIndex, 1)
+      if (letter) {
+        // If letter was selected, remove from selection
+        const selectedIndex = selectedLetters.value.indexOf(letter.letter)
+        if (selectedIndex !== -1) {
+          selectedLetters.value.splice(selectedIndex, 1)
+        }
       }
 
       letters.value.splice(letterIndex, 1)
@@ -150,16 +154,23 @@ export const useGameStore = defineStore('game', () => {
     const currentLetters = [...letters.value]
     for (let i = currentLetters.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
-      ;[currentLetters[i], currentLetters[j]] = [currentLetters[j], currentLetters[i]]
+      const temp = currentLetters[i]
+      const itemJ = currentLetters[j]
+      if (temp !== undefined && itemJ !== undefined) {
+        currentLetters[i] = itemJ
+        currentLetters[j] = temp
+      }
     }
     letters.value = currentLetters
   }
 
   function reorderLetters(fromIndex: number, toIndex: number) {
     const currentLetters = [...letters.value]
-    const [movedLetter] = currentLetters.splice(fromIndex, 1)
-    currentLetters.splice(toIndex, 0, movedLetter)
-    letters.value = currentLetters
+    const movedLetter = currentLetters.splice(fromIndex, 1)[0]
+    if (movedLetter) {
+      currentLetters.splice(toIndex, 0, movedLetter)
+      letters.value = currentLetters
+    }
   }
 
   function submitWord() {

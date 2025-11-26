@@ -18,6 +18,10 @@ onMounted(async () => {
     dictionaryLoading.value = false
   }
 })
+
+function reloadPage() {
+  window.location.reload()
+}
 </script>
 
 <template>
@@ -55,7 +59,7 @@ onMounted(async () => {
             color="primary"
             label="Reload"
             class="q-mt-md"
-            @click="() => window.location.reload()"
+            @click="reloadPage"
           />
         </div>
 

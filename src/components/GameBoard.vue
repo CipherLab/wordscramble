@@ -57,7 +57,7 @@
       </div>
       <div class="bonus-multipliers" v-if="gameStore.selectedLetters.length > 0">
         <span
-          v-for="(letter, index) in gameStore.selectedLetters"
+          v-for="(_letter, index) in gameStore.selectedLetters"
           :key="index"
           class="multiplier-badge"
           :class="{ 'has-multiplier': getWordPositionMultiplier(index) > 1 }"
