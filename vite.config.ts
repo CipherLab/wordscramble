@@ -5,8 +5,8 @@ import { quasar, transformAssetUrls } from '@quasar/vite-plugin'
 // https://vite.dev/config/
 export default defineConfig({
   // Set base to repo name for GitHub Pages
-  // Change 'word-scramble' to your actual GitHub repository name
-  base: process.env.NODE_ENV === 'production' ? '/word-scramble/' : '/',
+  // Change 'wordscramble' to your actual GitHub repository name
+  base: process.env.NODE_ENV === 'production' ? '/wordscramble/' : '/',
   plugins: [
     vue({
       template: { transformAssetUrls }
