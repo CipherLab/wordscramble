@@ -17,7 +17,7 @@ export async function loadDictionary(): Promise<void> {
 
   loadingPromise = (async () => {
     try {
-      const response = await fetch('/src/constants/words.txt')
+      const response = await fetch(`${import.meta.env.BASE_URL}words.txt`)
       if (!response.ok) {
         throw new Error(`Failed to load dictionary: ${response.status}`)
       }
