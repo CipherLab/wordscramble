@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useGameStore } from './stores/gameStore'
 import { loadDictionary } from './constants/dictionary'
 import GameBoard from './components/GameBoard.vue'
+import type { GameMode } from './stores/gameStore'
 
+const route = useRoute()
 const gameStore = useGameStore()
 const dictionaryLoading = ref(true)
 const dictionaryError = ref<string | null>(null)
@@ -11,11 +14,21 @@ const dictionaryError = ref<string | null>(null)
 onMounted(async () => {
   try {
     await loadDictionary()
-    gameStore.startGame()
+    // Start game based on current route
+    const mode = (route.meta.mode as GameMode) || 'random'
+    gameStore.startGame(mode)
   } catch (error) {
     dictionaryError.value = error instanceof Error ? error.message : 'Failed to load dictionary'
   } finally {
     dictionaryLoading.value = false
+  }
+})
+
+// Watch for route changes and start game with appropriate mode
+watch(() => route.path, () => {
+  if (!dictionaryLoading.value && !dictionaryError.value) {
+    const mode = (route.meta.mode as GameMode) || 'random'
+    gameStore.startGame(mode)
   }
 })
 
@@ -48,7 +61,7 @@ function formatDate(dateString: string): string {
             flat
             :outline="gameStore.gameMode === 'random'"
             label="Random"
-            @click="gameStore.startGame('random')"
+            :to="'/'"
           >
             <q-tooltip>Random puzzle with different letters each game</q-tooltip>
           </q-btn>
@@ -56,7 +69,7 @@ function formatDate(dateString: string): string {
             flat
             :outline="gameStore.gameMode === 'daily'"
             label="Daily"
-            @click="gameStore.startGame('daily')"
+            :to="'/daily'"
           >
             <q-tooltip>Daily puzzle - same for everyone today</q-tooltip>
           </q-btn>
