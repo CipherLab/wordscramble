@@ -6,8 +6,8 @@
         <div class="text-caption text-grey">{{ formatDate(date) }}</div>
       </div>
 
-      <!-- Username Input (if not submitted) -->
-      <div v-if="!scoreSubmitted && !submitting" class="q-mb-md">
+      <!-- Username Input (if not submitted and not view-only) -->
+      <div v-if="!viewOnly && !scoreSubmitted && !submitting" class="q-mb-md">
         <q-input
           v-model="localUsername"
           label="Your Name"
@@ -31,13 +31,13 @@
       </div>
 
       <!-- Submitting State -->
-      <div v-if="submitting" class="text-center q-pa-md">
+      <div v-if="!viewOnly && submitting" class="text-center q-pa-md">
         <q-spinner color="primary" size="md" />
         <div class="text-caption q-mt-sm">Submitting score...</div>
       </div>
 
       <!-- Error Message -->
-      <q-banner v-if="error" class="bg-negative text-white q-mb-md" dense>
+      <q-banner v-if="!viewOnly && error" class="bg-negative text-white q-mb-md" dense>
         {{ error }}
       </q-banner>
 
@@ -97,6 +97,7 @@ import type { LeaderboardEntry } from '../services/leaderboard'
 const props = defineProps<{
   score: number
   date: string
+  viewOnly?: boolean
 }>()
 
 const gameStore = useGameStore()

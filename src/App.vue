@@ -4,12 +4,14 @@ import { useRoute } from 'vue-router'
 import { useGameStore } from './stores/gameStore'
 import { loadDictionary } from './constants/dictionary'
 import GameBoard from './components/GameBoard.vue'
+import DailyLeaderboard from './components/DailyLeaderboard.vue'
 import type { GameMode } from './stores/gameStore'
 
 const route = useRoute()
 const gameStore = useGameStore()
 const dictionaryLoading = ref(true)
 const dictionaryError = ref<string | null>(null)
+const showLeaderboardDialog = ref(false)
 
 onMounted(async () => {
   try {
@@ -75,6 +77,16 @@ function formatDate(dateString: string): string {
           </q-btn>
         </q-btn-group>
         <q-btn
+          v-if="gameStore.gameMode === 'daily'"
+          flat
+          round
+          dense
+          icon="leaderboard"
+          @click="showLeaderboardDialog = true"
+        >
+          <q-tooltip>View Leaderboard</q-tooltip>
+        </q-btn>
+        <q-btn
           flat
           round
           dense
@@ -110,6 +122,31 @@ function formatDate(dateString: string): string {
         <GameBoard v-else />
       </q-page>
     </q-page-container>
+
+    <!-- Leaderboard Dialog -->
+    <q-dialog v-model="showLeaderboardDialog">
+      <q-card style="min-width: 350px; max-width: 600px;">
+        <q-card-section>
+          <div class="text-h6">Daily Leaderboard</div>
+          <div v-if="gameStore.dailyDate" class="text-caption text-grey">
+            {{ formatDate(gameStore.dailyDate) }}
+          </div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <DailyLeaderboard
+            v-if="gameStore.dailyDate"
+            :score="gameStore.score"
+            :date="gameStore.dailyDate"
+            :view-only="true"
+          />
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Close" color="primary" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-layout>
 </template>
 
