@@ -22,6 +22,15 @@ onMounted(async () => {
 function reloadPage() {
   window.location.reload()
 }
+
+function formatDate(dateString: string): string {
+  const date = new Date(dateString + 'T00:00:00')
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  })
+}
 </script>
 
 <template>
@@ -30,7 +39,28 @@ function reloadPage() {
       <q-toolbar>
         <q-toolbar-title>
           Word Scramble
+          <div v-if="gameStore.gameMode === 'daily' && gameStore.dailyDate" class="text-caption">
+            Daily Puzzle: {{ formatDate(gameStore.dailyDate) }}
+          </div>
         </q-toolbar-title>
+        <q-btn-group flat>
+          <q-btn
+            flat
+            :outline="gameStore.gameMode === 'random'"
+            label="Random"
+            @click="gameStore.startGame('random')"
+          >
+            <q-tooltip>Random puzzle with different letters each game</q-tooltip>
+          </q-btn>
+          <q-btn
+            flat
+            :outline="gameStore.gameMode === 'daily'"
+            label="Daily"
+            @click="gameStore.startGame('daily')"
+          >
+            <q-tooltip>Daily puzzle - same for everyone today</q-tooltip>
+          </q-btn>
+        </q-btn-group>
         <q-btn
           flat
           round

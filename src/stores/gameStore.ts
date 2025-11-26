@@ -1,11 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Letter, WordEntry } from '../types/game'
-import { createLetterBag, shuffleArray, getLetterPoints } from '../constants/scrabble'
+import { createLetterBag, shuffleArray, getLetterPoints, dateToSeed, getTodayDateString } from '../constants/scrabble'
 import { isValidWord } from '../constants/dictionary'
 
 const INITIAL_LETTERS = 9
 const LETTER_TIMER = 60 // seconds per letter
+
+export type GameMode = 'random' | 'daily'
 
 export const useGameStore = defineStore('game', () => {
   // State
@@ -16,6 +18,8 @@ export const useGameStore = defineStore('game', () => {
   const wordsPlayed = ref<WordEntry[]>([])
   const gameOver = ref(false)
   const timerIntervals = ref<Map<string, number>>(new Map())
+  const gameMode = ref<GameMode>('random')
+  const dailyDate = ref<string>('')
 
   // Computed
   const lettersLeft = computed(() => letterBag.value.length)
@@ -32,9 +36,24 @@ export const useGameStore = defineStore('game', () => {
   })
 
   // Actions
-  function startGame() {
-    // Initialize letter bag
-    letterBag.value = shuffleArray(createLetterBag())
+  function startGame(mode?: GameMode) {
+    // Set game mode (default to current mode if not specified)
+    if (mode) {
+      gameMode.value = mode
+    }
+
+    // Initialize letter bag with seed for daily mode
+    let seed: number | undefined = undefined
+    if (gameMode.value === 'daily') {
+      const today = getTodayDateString()
+      dailyDate.value = today
+      seed = dateToSeed(today)
+      console.log(`Daily puzzle for ${today} (seed: ${seed})`)
+    } else {
+      dailyDate.value = ''
+    }
+
+    letterBag.value = shuffleArray(createLetterBag(), seed)
 
     // Reset state
     letters.value = []
@@ -252,6 +271,8 @@ export const useGameStore = defineStore('game', () => {
     score,
     wordsPlayed,
     gameOver,
+    gameMode,
+    dailyDate,
 
     // Computed
     lettersLeft,

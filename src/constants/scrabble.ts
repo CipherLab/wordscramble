@@ -53,11 +53,43 @@ export function getLetterPoints(letter: string): number {
   return config?.points || 0
 }
 
-// Shuffle array (Fisher-Yates algorithm)
-export function shuffleArray<T>(array: T[]): T[] {
+// Simple seeded random number generator (Mulberry32)
+function seededRandom(seed: number) {
+  return function() {
+    seed = (seed + 0x6D2B79F5) | 0
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+// Convert date string (YYYY-MM-DD) to seed number
+export function dateToSeed(dateString: string): number {
+  let hash = 0
+  for (let i = 0; i < dateString.length; i++) {
+    const char = dateString.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash // Convert to 32-bit integer
+  }
+  return Math.abs(hash)
+}
+
+// Get today's date as YYYY-MM-DD string
+export function getTodayDateString(): string {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// Shuffle array (Fisher-Yates algorithm) with optional seed
+export function shuffleArray<T>(array: T[], seed?: number): T[] {
   const shuffled = [...array]
+  const random = seed !== undefined ? seededRandom(seed) : Math.random
+
   for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
+    const j = Math.floor(random() * (i + 1))
     const temp = shuffled[i]
     const itemJ = shuffled[j]
     if (temp !== undefined && itemJ !== undefined) {
