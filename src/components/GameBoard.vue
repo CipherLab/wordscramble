@@ -361,8 +361,11 @@ function handleKeyPress(event: KeyboardEvent) {
   // Handle letter keys (A-Z)
   if (key.length === 1 && key >= "A" && key <= "Z") {
     // Find first unselected letter matching the pressed key
+    // Also match if the letter starts with the key (e.g., "Q" matches "QU")
     const matchingLetter = gameStore.letters.find(
-      (letter) => letter.letter === key && !letter.selected
+      (letter) =>
+        !letter.selected &&
+        (letter.letter === key || letter.letter.startsWith(key))
     );
 
     if (matchingLetter) {
