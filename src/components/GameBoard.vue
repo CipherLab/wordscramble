@@ -160,35 +160,6 @@
       </div>
     </div>
 
-    <!-- Words Played -->
-    <div class="words-section">
-      <q-card>
-        <q-card-section>
-          <div class="text-h6 q-mb-md">All Words</div>
-          <div
-            v-if="gameStore.wordsPlayed.length === 0"
-            class="text-caption text-grey"
-          >
-            No words played yet
-          </div>
-          <q-list v-else dense>
-            <q-item
-              v-for="(word, index) in sortedWords"
-              :key="index"
-              :class="{ 'top-word': word === gameStore.topWord }"
-            >
-              <q-item-section>
-                <q-item-label>{{ word.word }}</q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <q-item-label>{{ word.points }}</q-item-label>
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </q-card-section>
-      </q-card>
-    </div>
-
     <!-- Letters Remaining Legend -->
     <div class="letters-legend-section">
       <q-card>
@@ -217,6 +188,34 @@
               <span class="letter-count">{{ count }}</span>
             </div>
           </div>
+        </q-card-section>
+      </q-card>
+    </div>
+    <!-- Words Played -->
+    <div class="words-section">
+      <q-card>
+        <q-card-section>
+          <div class="text-h6 q-mb-md">All Words</div>
+          <div
+            v-if="gameStore.wordsPlayed.length === 0"
+            class="text-caption text-grey"
+          >
+            No words played yet
+          </div>
+          <q-list v-else dense>
+            <q-item
+              v-for="(word, index) in sortedWords"
+              :key="index"
+              :class="{ 'top-word': word === gameStore.topWord }"
+            >
+              <q-item-section>
+                <q-item-label>{{ word.word }}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-item-label>{{ word.points }}</q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
         </q-card-section>
       </q-card>
     </div>
