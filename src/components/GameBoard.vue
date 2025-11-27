@@ -326,6 +326,13 @@ function handleKeyPress(event: KeyboardEvent) {
     return;
   }
 
+  // Handle Spacebar to shuffle
+  if (event.key === " ") {
+    event.preventDefault();
+    gameStore.shuffleLetters();
+    return;
+  }
+
   // Handle Escape to clear
   if (key === "ESCAPE") {
     if (gameStore.selectedLetters.length > 0) {
