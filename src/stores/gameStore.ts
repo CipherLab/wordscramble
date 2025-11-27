@@ -5,7 +5,7 @@ import { createLetterBag, shuffleArray, getLetterPoints, dateToSeed, getTodayDat
 import { isValidWord } from '../constants/dictionary'
 
 const INITIAL_LETTERS = 9
-const LETTER_TIMER = 60 // seconds per letter
+const LETTER_TIMER = 120 // seconds per letter
 
 export type GameMode = 'random' | 'daily'
 
@@ -27,7 +27,7 @@ export const useGameStore = defineStore('game', () => {
   const lettersLeft = computed(() => letterBag.value.length)
   const selectedWord = computed(() => selectedLetters.value.join(''))
   const isCurrentWordValid = computed(() => {
-    if (selectedLetters.value.length < 3) return false
+    if (selectedLetters.value.length < 1) return false
     return isValidWord(selectedWord.value)
   })
   const topWord = computed(() => {
@@ -196,8 +196,8 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function submitWord() {
-    if (selectedLetters.value.length < 3) {
-      return { success: false, message: 'Word must be at least 3 letters' }
+    if (selectedLetters.value.length < 1) {
+      return { success: false, message: 'Please select at least one letter' }
     }
 
     const word = selectedWord.value.toUpperCase()

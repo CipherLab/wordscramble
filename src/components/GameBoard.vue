@@ -100,7 +100,7 @@
         label="Submit"
         icon="check"
         @click="handleSubmit"
-        :disable="gameStore.gameOver || gameStore.selectedLetters.length < 3"
+        :disable="gameStore.gameOver || gameStore.selectedLetters.length < 1"
       />
     </div>
 
