@@ -38,7 +38,29 @@
         />
       </div>
     </div>
+    <!-- Game Stats -->
+    <div class="stats-section">
+      <q-card class="stat-card">
+        <q-card-section class="text-center">
+          <div class="stat-label">Score</div>
+          <div class="stat-value">{{ gameStore.score }}</div>
+        </q-card-section>
+      </q-card>
 
+      <q-card class="stat-card">
+        <q-card-section class="text-center">
+          <div class="stat-label">Letters Left</div>
+          <div class="stat-value">{{ gameStore.lettersLeft }}</div>
+        </q-card-section>
+      </q-card>
+
+      <q-card class="stat-card">
+        <q-card-section class="text-center">
+          <div class="stat-label">Word Value</div>
+          <div class="stat-value">{{ currentWordValue }}</div>
+        </q-card-section>
+      </q-card>
+    </div>
     <!-- Upcoming Letters Preview -->
     <div v-if="gameStore.upcomingLetters.length > 0" class="upcoming-section">
       <div class="text-subtitle2 text-center q-mb-sm text-grey-7">Next up:</div>
@@ -49,7 +71,9 @@
           class="upcoming-letter"
           :style="{
             opacity: 1 - index * 0.3,
-            background: `linear-gradient(135deg, ${getLetterColor(getLetterPoints(letter)).base}, ${getLetterColor(getLetterPoints(letter)).highlight})`
+            background: `linear-gradient(135deg, ${
+              getLetterColor(getLetterPoints(letter)).base
+            }, ${getLetterColor(getLetterPoints(letter)).highlight})`,
           }"
         >
           <div class="upcoming-letter-text">{{ letter }}</div>
@@ -74,7 +98,30 @@
         />
       </div>
     </div>
-
+    <!-- Control Buttons -->
+    <div class="controls-section">
+      <q-btn
+        color="warning"
+        label="Shuffle"
+        icon="shuffle"
+        @click="gameStore.shuffleLetters()"
+        :disable="gameStore.gameOver"
+      />
+      <q-btn
+        color="negative"
+        label="Clear"
+        icon="clear"
+        @click="gameStore.clearSelection()"
+        :disable="gameStore.gameOver || gameStore.selectedLetters.length === 0"
+      />
+      <q-btn
+        color="positive"
+        label="Submit"
+        icon="check"
+        @click="handleSubmit"
+        :disable="gameStore.gameOver || gameStore.selectedLetters.length < 1"
+      />
+    </div>
     <!-- Current Word Display -->
     <div class="current-word-section">
       <div class="current-word-label">Current Word:</div>
@@ -111,55 +158,6 @@
           </span>
         </span>
       </div>
-    </div>
-
-    <!-- Control Buttons -->
-    <div class="controls-section">
-      <q-btn
-        color="warning"
-        label="Shuffle"
-        icon="shuffle"
-        @click="gameStore.shuffleLetters()"
-        :disable="gameStore.gameOver"
-      />
-      <q-btn
-        color="negative"
-        label="Clear"
-        icon="clear"
-        @click="gameStore.clearSelection()"
-        :disable="gameStore.gameOver || gameStore.selectedLetters.length === 0"
-      />
-      <q-btn
-        color="positive"
-        label="Submit"
-        icon="check"
-        @click="handleSubmit"
-        :disable="gameStore.gameOver || gameStore.selectedLetters.length < 1"
-      />
-    </div>
-
-    <!-- Game Stats -->
-    <div class="stats-section">
-      <q-card class="stat-card">
-        <q-card-section class="text-center">
-          <div class="stat-label">Score</div>
-          <div class="stat-value">{{ gameStore.score }}</div>
-        </q-card-section>
-      </q-card>
-
-      <q-card class="stat-card">
-        <q-card-section class="text-center">
-          <div class="stat-label">Letters Left</div>
-          <div class="stat-value">{{ gameStore.lettersLeft }}</div>
-        </q-card-section>
-      </q-card>
-
-      <q-card class="stat-card">
-        <q-card-section class="text-center">
-          <div class="stat-label">Word Value</div>
-          <div class="stat-value">{{ currentWordValue }}</div>
-        </q-card-section>
-      </q-card>
     </div>
 
     <!-- Words Played -->
@@ -210,7 +208,9 @@
               :key="letter"
               class="letter-count-item"
               :style="{
-                background: `linear-gradient(145deg, ${getLetterColor(getLetterPoints(letter)).base}, ${getLetterColor(getLetterPoints(letter)).highlight})`
+                background: `linear-gradient(145deg, ${
+                  getLetterColor(getLetterPoints(letter)).base
+                }, ${getLetterColor(getLetterPoints(letter)).highlight})`,
               }"
             >
               <span class="letter-label">{{ letter }}</span>
@@ -340,9 +340,10 @@ function handleKeyPress(event: KeyboardEvent) {
     event.preventDefault();
     if (gameStore.selectedLetters.length > 0) {
       // Find the last selected letter and toggle it off
-      const selectedLetterTiles = gameStore.letters.filter(l => l.selected);
+      const selectedLetterTiles = gameStore.letters.filter((l) => l.selected);
       if (selectedLetterTiles.length > 0) {
-        const lastSelected = selectedLetterTiles[selectedLetterTiles.length - 1];
+        const lastSelected =
+          selectedLetterTiles[selectedLetterTiles.length - 1];
         if (lastSelected) {
           gameStore.toggleLetterSelection(lastSelected.id);
         }
