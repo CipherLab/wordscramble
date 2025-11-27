@@ -36,6 +36,26 @@ export const useGameStore = defineStore('game', () => {
       word.points > max.points ? word : max
     )
   })
+  const letterCounts = computed(() => {
+    const counts: Record<string, number> = {}
+    letterBag.value.forEach(letter => {
+      counts[letter] = (counts[letter] || 0) + 1
+    })
+    // Sort alphabetically
+    return Object.keys(counts)
+      .sort()
+      .reduce((acc, key) => {
+        acc[key] = counts[key] || 0
+        return acc
+      }, {} as Record<string, number>)
+  })
+  const upcomingLetters = computed(() => {
+    // Get the next 3 letters that will be drawn (from the end of the bag)
+    const bagLength = letterBag.value.length
+    if (bagLength === 0) return []
+    const count = Math.min(3, bagLength)
+    return letterBag.value.slice(bagLength - count, bagLength).reverse()
+  })
 
   // Actions
   function startGame(mode?: GameMode) {
@@ -294,6 +314,8 @@ export const useGameStore = defineStore('game', () => {
     selectedWord,
     isCurrentWordValid,
     topWord,
+    letterCounts,
+    upcomingLetters,
 
     // Actions
     startGame,

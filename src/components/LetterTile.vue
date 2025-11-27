@@ -5,6 +5,7 @@
       'letter-tile--selected': letter.selected,
       'letter-tile--expiring': isExpiring
     }"
+    :style="!letter.selected ? { background: `linear-gradient(145deg, ${tileColor.base}, ${tileColor.highlight})` } : {}"
     draggable="true"
     @click="$emit('toggle', letter.id)"
     @dragstart="handleDragStart"
@@ -34,6 +35,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Letter } from '../types/game'
+import { getLetterColor } from '../utils/letterColors'
 
 interface Props {
   letter: Letter
@@ -55,6 +57,10 @@ const timerPercentage = computed(() => {
 
 const isExpiring = computed(() => {
   return props.letter.timeLeft <= 10
+})
+
+const tileColor = computed(() => {
+  return getLetterColor(props.letter.points)
 })
 
 function handleDragStart(e: DragEvent) {
