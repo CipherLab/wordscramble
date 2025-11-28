@@ -34,6 +34,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useQuasar } from 'quasar'
 import type { Letter } from '../types/game'
 import { getLetterColor } from '../utils/letterColors'
 
@@ -43,6 +44,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const $q = useQuasar()
 
 const emit = defineEmits<{
   toggle: [id: string]
@@ -60,7 +62,7 @@ const isExpiring = computed(() => {
 })
 
 const tileColor = computed(() => {
-  return getLetterColor(props.letter.points)
+  return getLetterColor(props.letter.points, $q.dark.isActive)
 })
 
 function handleDragStart(e: DragEvent) {
@@ -122,6 +124,9 @@ function handleDrop(e: DragEvent) {
     &--small
       font-size: 28px
 
+    body.body--dark &
+      color: #e0e0e0
+
   &__points
     position: absolute
     top: 4px
@@ -129,6 +134,9 @@ function handleDrop(e: DragEvent) {
     font-size: 14px
     font-weight: bold
     color: #666
+
+    body.body--dark &
+      color: #bbb
 
   &__timer-container
     position: absolute

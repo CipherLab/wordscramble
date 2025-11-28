@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useQuasar } from 'quasar'
 import { useGameStore } from './stores/gameStore'
 import { loadDictionary } from './constants/dictionary'
 import GameBoard from './components/GameBoard.vue'
@@ -8,12 +9,29 @@ import DailyLeaderboard from './components/DailyLeaderboard.vue'
 import type { GameMode } from './stores/gameStore'
 
 const route = useRoute()
+const $q = useQuasar()
 const gameStore = useGameStore()
 const dictionaryLoading = ref(true)
 const dictionaryError = ref<string | null>(null)
 const showLeaderboardDialog = ref(false)
 
+// Dark mode setup
+const isDarkMode = ref($q.dark.isActive)
+
+function toggleDarkMode() {
+  $q.dark.toggle()
+  isDarkMode.value = $q.dark.isActive
+  localStorage.setItem('wordscramble_darkmode', $q.dark.isActive ? 'true' : 'false')
+}
+
 onMounted(async () => {
+  // Initialize dark mode from localStorage
+  const savedDarkMode = localStorage.getItem('wordscramble_darkmode')
+  if (savedDarkMode !== null) {
+    $q.dark.set(savedDarkMode === 'true')
+    isDarkMode.value = $q.dark.isActive
+  }
+
   try {
     await loadDictionary()
     // Start game based on current route
@@ -94,6 +112,15 @@ function formatDate(dateString: string): string {
           @click="gameStore.startGame()"
         >
           <q-tooltip>New Game</q-tooltip>
+        </q-btn>
+        <q-btn
+          flat
+          round
+          dense
+          :icon="isDarkMode ? 'light_mode' : 'dark_mode'"
+          @click="toggleDarkMode"
+        >
+          <q-tooltip>{{ isDarkMode ? 'Light Mode' : 'Dark Mode' }}</q-tooltip>
         </q-btn>
       </q-toolbar>
     </q-header>

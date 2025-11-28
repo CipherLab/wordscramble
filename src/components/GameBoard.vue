@@ -72,8 +72,8 @@
           :style="{
             opacity: 1 - index * 0.3,
             background: `linear-gradient(135deg, ${
-              getLetterColor(getLetterPoints(letter)).base
-            }, ${getLetterColor(getLetterPoints(letter)).highlight})`,
+              getLetterColor(getLetterPoints(letter), $q.dark.isActive).base
+            }, ${getLetterColor(getLetterPoints(letter), $q.dark.isActive).highlight})`,
           }"
         >
           <div class="upcoming-letter-text">{{ letter }}</div>
@@ -180,8 +180,8 @@
               class="letter-count-item"
               :style="{
                 background: `linear-gradient(145deg, ${
-                  getLetterColor(getLetterPoints(letter)).base
-                }, ${getLetterColor(getLetterPoints(letter)).highlight})`,
+                  getLetterColor(getLetterPoints(letter), $q.dark.isActive).base
+                }, ${getLetterColor(getLetterPoints(letter), $q.dark.isActive).highlight})`,
               }"
             >
               <span class="letter-label">{{ letter }}</span>
@@ -443,10 +443,17 @@ onUnmounted(() => {
   margin-bottom: 20px
   text-align: center
 
+  body.body--dark &
+    background: #2a2a2a
+    border-color: #555
+
 .current-word-label
   font-size: 14px
   color: #666
   margin-bottom: 8px
+
+  body.body--dark &
+    color: #aaa
 
 .current-word-display
   font-size: 32px
@@ -456,8 +463,14 @@ onUnmounted(() => {
   margin-bottom: 8px
   transition: color 0.2s ease
 
+  body.body--dark &
+    color: #e0e0e0
+
   &.invalid-word
     color: #c10015
+
+    body.body--dark &
+      color: #ff5252
 
 .word-letters
   display: inline-flex
@@ -469,6 +482,9 @@ onUnmounted(() => {
 .word-placeholder
   letter-spacing: 4px
   color: #999
+
+  body.body--dark &
+    color: #666
 
 .bonus-multipliers
   display: flex
@@ -542,10 +558,16 @@ onUnmounted(() => {
     font-weight: bold
     color: #333
 
+    body.body--dark &
+      color: #e0e0e0
+
   .upcoming-letter-points
     font-size: 11px
     color: #666
     margin-top: 2px
+
+    body.body--dark &
+      color: #bbb
 
 .words-section
   .top-word
@@ -579,8 +601,14 @@ onUnmounted(() => {
     font-weight: bold
     color: #333
 
+    body.body--dark &
+      color: #e0e0e0
+
   .letter-count
     font-size: 12px
     color: #666
     margin-top: 2px
+
+    body.body--dark &
+      color: #bbb
 </style>
