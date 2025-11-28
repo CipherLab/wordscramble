@@ -194,4 +194,7 @@ function formatDate(dateString: string): string {
 .user-entry
   background: #e3f2fd
   font-weight: 500
+
+  body.body--dark &
+    background: #1e3a5f
 </style>
