@@ -107,6 +107,16 @@ function gameLoop() {
   // Clear canvas
   renderer.clearCanvas(ctx, physics.canvasWidth.value, physics.canvasHeight.value)
 
+  // Render current word in background
+  renderer.renderWordBackground(
+    ctx,
+    physics.canvasWidth.value,
+    physics.canvasHeight.value,
+    game.currentWord.value,
+    game.isCurrentWordValid.value,
+    game.potentialScore.value
+  )
+
   // Render gems
   renderer.renderGems(
     ctx,

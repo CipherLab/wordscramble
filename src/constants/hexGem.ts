@@ -8,14 +8,16 @@ export const SPAWN_INTERVAL = 150
 export const MAX_GEMS_ON_SCREEN = 50
 
 // Special gem spawn chances (checked in order)
-export const BOMB_CHANCE = 0.03        // 3% chance for bomb
+export const BOMB_CHANCE = 0.06        // 6% chance for bomb
 export const MULTIPLY_3X_CHANCE = 0.02 // 2% chance for 3x multiplier
 export const MULTIPLY_2X_CHANCE = 0.05 // 5% chance for 2x multiplier
 
 // Animation
 export const POP_DURATION = 200  // ms per gem pop
 export const POP_STAGGER = 80    // ms delay between each gem pop
-export const EXPLOSION_FORCE = 0.15
+export const EXPLOSION_FORCE = 0.4
+export const EXPLOSION_RADIUS_MULTIPLIER = 6  // multiplied by HEX_RADIUS
+export const BOMB_FUSE_TIME = 8000  // 8 seconds until bomb explodes
 
 // Combo system
 export const COMBO_WINDOW = 5000 // 5 seconds to continue combo

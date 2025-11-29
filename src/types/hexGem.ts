@@ -10,6 +10,7 @@ export interface HexGem {
   selected: boolean
   selectionOrder: number
   gemType: GemType
+  spawnTime?: number  // For timed bombs
 }
 
 export interface PopAnimation {

@@ -290,11 +290,67 @@ export function useHexGemRenderer() {
     ctx.fillRect(0, 0, width, height)
   }
 
+  // Render current word in center of canvas as subtle background
+  function renderWordBackground(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    word: string,
+    isValid: boolean,
+    potentialScore: number
+  ) {
+    if (!word || word.length < 1) return
+
+    ctx.save()
+
+    const centerX = width / 2
+    const centerY = height * 0.35 // Higher up on canvas
+
+    // Draw large subtle letters
+    const fontSize = Math.min(80, width / (word.length * 0.8))
+    ctx.font = `bold ${fontSize}px Arial`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+
+    // Subtle color based on validity (slightly brighter)
+    if (isValid) {
+      ctx.fillStyle = 'rgba(76, 175, 80, 0.22)'
+    } else if (word.length >= 2) {
+      ctx.fillStyle = 'rgba(244, 67, 54, 0.15)'
+    } else {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.12)'
+    }
+
+    ctx.fillText(word, centerX, centerY)
+
+    // Add subtle outline
+    ctx.strokeStyle = isValid ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255, 255, 255, 0.08)'
+    ctx.lineWidth = 2
+    ctx.strokeText(word, centerX, centerY)
+
+    // Draw potential score underneath
+    if (potentialScore > 0) {
+      const scoreY = centerY + fontSize * 0.6 + 10
+      ctx.font = 'bold 24px Arial'
+
+      if (isValid) {
+        ctx.fillStyle = 'rgba(76, 175, 80, 0.35)'
+        ctx.fillText(`+${potentialScore}`, centerX, scoreY)
+      } else {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'
+        ctx.fillText(`(${potentialScore})`, centerX, scoreY)
+      }
+    }
+
+    ctx.restore()
+  }
+
   return {
     renderGems,
     renderPoppingGem,
     processPopAnimations,
     clearCanvas,
+    renderWordBackground,
     createHexagonVertices,
     getGemColor,
     getGemBorderColor

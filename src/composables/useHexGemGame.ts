@@ -10,6 +10,8 @@ import {
   MULTIPLY_3X_CHANCE,
   MULTIPLY_2X_CHANCE,
   EXPLOSION_FORCE,
+  EXPLOSION_RADIUS_MULTIPLIER,
+  BOMB_FUSE_TIME,
   POP_STAGGER,
   COMBO_WINDOW,
   LEVEL_THRESHOLDS,
@@ -73,6 +75,20 @@ export function useHexGemGame(
     return Math.max(0, (comboTimeLeft.value / COMBO_WINDOW) * 100)
   })
 
+  const potentialScore = computed(() => {
+    if (currentWord.value.length < 1) return 0
+    const basePoints = calculateWordScore(currentWord.value)
+
+    // Apply multipliers from selected special gems
+    let gemMultiplier = 1
+    for (const gem of selectedGems) {
+      if (gem.gemType === 'multiply2x') gemMultiplier *= 2
+      if (gem.gemType === 'multiply3x') gemMultiplier *= 3
+    }
+
+    return Math.floor(basePoints * gemMultiplier * comboMultiplier.value)
+  })
+
   // Get a random letter for endless mode
   function getRandomLetter(): string {
     return ENDLESS_LETTERS[Math.floor(Math.random() * ENDLESS_LETTERS.length)]!
@@ -111,7 +127,8 @@ export function useHexGemGame(
         body: circleBody,
         selected: false,
         selectionOrder: -1,
-        gemType
+        gemType,
+        spawnTime: gemType === 'bomb' ? performance.now() : undefined
       }
     }
 
@@ -122,7 +139,8 @@ export function useHexGemGame(
       body,
       selected: false,
       selectionOrder: -1,
-      gemType
+      gemType,
+      spawnTime: gemType === 'bomb' ? performance.now() : undefined
     }
   }
 
@@ -312,9 +330,9 @@ export function useHexGemGame(
     }
   }
 
-  // Trigger explosion from bomb gems
-  function triggerExplosion(bombGem: HexGem) {
-    const explosionRadius = HEX_RADIUS * 4
+  // Trigger push explosion from bomb gems (when used in a word - just shoves gems)
+  function triggerPushExplosion(bombGem: HexGem) {
+    const explosionRadius = HEX_RADIUS * EXPLOSION_RADIUS_MULTIPLIER
     const bombPos = bombGem.body.position
 
     for (const gem of gems) {
@@ -335,6 +353,77 @@ export function useHexGemGame(
         Matter.Body.setAngularVelocity(gem.body, gem.body.angularVelocity + torque)
       }
     }
+  }
+
+  // Trigger destructive explosion (when bomb timer expires - destroys gems)
+  function triggerDestructiveExplosion(bombGem: HexGem) {
+    const engine = getEngine()
+    if (!engine) return
+
+    const explosionRadius = HEX_RADIUS * EXPLOSION_RADIUS_MULTIPLIER
+    const bombPos = bombGem.body.position
+    const now = performance.now()
+
+    // Find gems in range to destroy
+    const gemsToDestroy: HexGem[] = []
+    for (const gem of gems) {
+      if (gem === bombGem) continue
+
+      const dx = gem.body.position.x - bombPos.x
+      const dy = gem.body.position.y - bombPos.y
+      const distance = Math.sqrt(dx * dx + dy * dy)
+
+      if (distance < explosionRadius) {
+        gemsToDestroy.push(gem)
+      }
+    }
+
+    // Queue pop animations for destroyed gems (staggered by distance)
+    gemsToDestroy.sort((a, b) => {
+      const distA = Math.hypot(a.body.position.x - bombPos.x, a.body.position.y - bombPos.y)
+      const distB = Math.hypot(b.body.position.x - bombPos.x, b.body.position.y - bombPos.y)
+      return distA - distB
+    })
+
+    for (let i = 0; i < gemsToDestroy.length; i++) {
+      const gem = gemsToDestroy[i]!
+      Matter.Body.setStatic(gem.body, true)
+      popAnimations.push({
+        gem,
+        startTime: now,
+        delay: i * 30 // Fast stagger for explosion
+      })
+    }
+
+    // Also pop the bomb itself
+    Matter.Body.setStatic(bombGem.body, true)
+    popAnimations.push({
+      gem: bombGem,
+      startTime: now,
+      delay: 0
+    })
+  }
+
+  // Check and process bomb timers
+  function processBombTimers() {
+    const now = performance.now()
+    const animatingIds = new Set(popAnimations.map(a => a.gem.id))
+
+    for (const gem of gems) {
+      if (gem.gemType === 'bomb' && gem.spawnTime && !gem.selected && !animatingIds.has(gem.id)) {
+        const elapsed = now - gem.spawnTime
+        if (elapsed >= BOMB_FUSE_TIME) {
+          triggerDestructiveExplosion(gem)
+        }
+      }
+    }
+  }
+
+  // Get bomb fuse progress (0 to 1) for rendering
+  function getBombFuseProgress(gem: HexGem): number {
+    if (gem.gemType !== 'bomb' || !gem.spawnTime) return 0
+    const elapsed = performance.now() - gem.spawnTime
+    return Math.min(1, elapsed / BOMB_FUSE_TIME)
   }
 
   // Submit word
@@ -404,12 +493,12 @@ export function useHexGemGame(
       })
     }
 
-    // Check for bomb gems
+    // Check for bomb gems - using in a word triggers push explosion (just shoves, doesn't destroy)
     const bombGems = selectedGems.filter(g => g.gemType === 'bomb')
     if (bombGems.length > 0) {
       setTimeout(() => {
         for (const bomb of bombGems) {
-          triggerExplosion(bomb)
+          triggerPushExplosion(bomb)
         }
       }, sortedGems.length * POP_STAGGER)
     }
@@ -524,6 +613,7 @@ export function useHexGemGame(
     currentLevel,
     comboMultiplier,
     comboTimerPercent,
+    potentialScore,
 
     // Methods
     startGame,
