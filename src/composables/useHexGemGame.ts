@@ -16,7 +16,12 @@ import {
   POP_STAGGER,
   COMBO_WINDOW,
   LEVEL_THRESHOLDS,
-  ENDLESS_LETTERS
+  ENDLESS_LETTERS,
+  OXYGEN_MAX,
+  OXYGEN_DRAIN_PER_SECOND,
+  OXYGEN_REFILL_BASE,
+  OXYGEN_REFILL_PER_LETTER,
+  OXYGEN_REFILL_PER_POINT
 } from '../constants/hexGem'
 import { getLetterPoints, createLetterBag, shuffleArray } from '../constants/scrabble'
 import { loadDictionary, isValidWord } from '../constants/dictionary'
@@ -43,6 +48,10 @@ export function useHexGemGame(
 
   // Selection tracking for reactivity (increments on selection changes)
   const selectionVersion = ref(0)
+
+  // Oxygen/timer system
+  const oxygen = ref(OXYGEN_MAX)
+  let lastOxygenUpdate = 0
 
   // Internal game state (not reactive for performance)
   let gems: HexGem[] = []
@@ -95,6 +104,10 @@ export function useHexGemGame(
     }
 
     return Math.floor(basePoints * gemMultiplier * comboMultiplier.value)
+  })
+
+  const oxygenPercent = computed(() => {
+    return (oxygen.value / OXYGEN_MAX) * 100
   })
 
   // Get a random letter for endless mode
@@ -324,6 +337,40 @@ export function useHexGemGame(
     }
   }
 
+  // Update oxygen (drain over time)
+  function updateOxygen() {
+    if (!gameStarted.value || gameOver.value) return
+
+    const now = performance.now()
+    if (lastOxygenUpdate === 0) {
+      lastOxygenUpdate = now
+      return
+    }
+
+    const deltaSeconds = (now - lastOxygenUpdate) / 1000
+    lastOxygenUpdate = now
+
+    // Drain oxygen
+    oxygen.value = Math.max(0, oxygen.value - OXYGEN_DRAIN_PER_SECOND * deltaSeconds)
+
+    // Check for game over
+    if (oxygen.value <= 0) {
+      gameOver.value = true
+      if (spawnTimeoutId) {
+        clearTimeout(spawnTimeoutId)
+        spawnTimeoutId = null
+      }
+    }
+  }
+
+  // Refill oxygen based on word
+  function refillOxygen(word: string, points: number) {
+    const letterBonus = Math.max(0, word.length - 2) * OXYGEN_REFILL_PER_LETTER
+    const pointBonus = points * OXYGEN_REFILL_PER_POINT
+    const refill = OXYGEN_REFILL_BASE + letterBonus + pointBonus
+    oxygen.value = Math.min(OXYGEN_MAX, oxygen.value + refill)
+  }
+
   // Check for rewards
   function checkForRewards(word: string, combo: number) {
     if (word.length >= 7) {
@@ -490,6 +537,9 @@ export function useHexGemGame(
     // Check for rewards
     checkForRewards(word, comboCount.value)
 
+    // Refill oxygen
+    refillOxygen(word, points)
+
     // Track top word
     if (!topWord.value || points > topWord.value.points) {
       topWord.value = { word, points }
@@ -570,6 +620,8 @@ export function useHexGemGame(
     level.value = 1
     wordsThisLevel.value = 0
     selectionVersion.value = 0
+    oxygen.value = OXYGEN_MAX
+    lastOxygenUpdate = 0
 
     // Clear existing gems
     if (engine) {
@@ -624,6 +676,7 @@ export function useHexGemGame(
     comboTimeLeft,
     level,
     wordsThisLevel,
+    oxygen,
 
     // Computed
     gemsRemaining,
@@ -632,6 +685,7 @@ export function useHexGemGame(
     comboMultiplier,
     comboTimerPercent,
     potentialScore,
+    oxygenPercent,
 
     // Methods
     startGame,
@@ -642,6 +696,7 @@ export function useHexGemGame(
     clearSelection,
     submitWord,
     updateComboTimer,
+    updateOxygen,
     processBombTimers,
     processAnimationsAndCleanup,
     getGemAtPosition,

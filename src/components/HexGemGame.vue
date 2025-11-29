@@ -32,6 +32,17 @@
           </span>
         </div>
       </div>
+      <!-- Oxygen Bar -->
+      <div class="oxygen-bar-container" v-if="game.gameStarted.value && !game.gameOver.value">
+        <div class="oxygen-bar">
+          <div
+            class="oxygen-fill"
+            :class="{ low: game.oxygenPercent.value < 30, critical: game.oxygenPercent.value < 15 }"
+            :style="{ width: game.oxygenPercent.value + '%' }"
+          ></div>
+        </div>
+        <span class="oxygen-label">O₂</span>
+      </div>
     </div>
 
     <!-- Game Canvas Container -->
@@ -42,7 +53,7 @@
     <!-- Game Over Overlay -->
     <div v-if="game.gameOver.value" class="game-over-overlay">
       <div class="game-over-card">
-        <h2>Game Over!</h2>
+        <h2>Out of Oxygen!</h2>
         <p class="final-score">Final Score: {{ game.score.value }}</p>
         <p class="final-level">Level {{ game.level.value }}</p>
         <div v-if="game.topWord.value" class="top-word-display">
@@ -60,10 +71,10 @@
         <h2>Hex Word Gems</h2>
         <p>Connect adjacent gems to form words!</p>
         <ul>
+          <li><span style="color: #4fc3f7">O₂ is draining!</span> Make words to refill</li>
           <li>Tap and drag to connect letters</li>
           <li>Release to submit the word</li>
-          <li>Build combos for bonus multipliers!</li>
-          <li>5+ letter words spawn bonus gems</li>
+          <li>Longer words = more oxygen</li>
           <li>💣 Bombs explode nearby gems</li>
           <li><span style="color: #69f0ae">×2</span> and <span style="color: #e040fb">×3</span> multiply your score!</li>
         </ul>
@@ -103,6 +114,9 @@ function gameLoop() {
 
   // Update combo timer
   game.updateComboTimer()
+
+  // Update oxygen (drains over time)
+  game.updateOxygen()
 
   // Check bomb timers
   game.processBombTimers()
@@ -318,6 +332,50 @@ onUnmounted(() => {
   background: linear-gradient(90deg, #ff5722, #ff9800)
   transition: width 0.1s linear
 
+// Oxygen bar styles
+.oxygen-bar-container
+  display: flex
+  align-items: center
+  gap: 8px
+  padding: 8px 15px 0
+
+.oxygen-bar
+  flex: 1
+  height: 12px
+  background: rgba(255, 255, 255, 0.15)
+  border-radius: 6px
+  overflow: hidden
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3)
+
+.oxygen-fill
+  height: 100%
+  background: linear-gradient(90deg, #4fc3f7, #00bcd4)
+  border-radius: 6px
+  transition: width 0.15s linear
+  box-shadow: 0 0 10px rgba(79, 195, 247, 0.5)
+
+  &.low
+    background: linear-gradient(90deg, #ff9800, #ffc107)
+    box-shadow: 0 0 10px rgba(255, 152, 0, 0.5)
+    animation: pulse-oxygen 1s ease-in-out infinite
+
+  &.critical
+    background: linear-gradient(90deg, #f44336, #ff5722)
+    box-shadow: 0 0 15px rgba(244, 67, 54, 0.7)
+    animation: pulse-oxygen 0.4s ease-in-out infinite
+
+.oxygen-label
+  color: #4fc3f7
+  font-size: 14px
+  font-weight: bold
+  text-shadow: 0 0 8px rgba(79, 195, 247, 0.5)
+
+@keyframes pulse-oxygen
+  0%, 100%
+    opacity: 1
+  50%
+    opacity: 0.7
+
 @keyframes pulse-combo
   0%
     transform: scale(1)
@@ -328,7 +386,7 @@ onUnmounted(() => {
 
 .canvas-container
   position: absolute
-  top: 60px
+  top: 80px
   left: 0
   right: 0
   bottom: 0

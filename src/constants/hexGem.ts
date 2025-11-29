@@ -23,6 +23,13 @@ export const BOMB_FUSE_TIME = 30000   // 30 seconds fuse duration
 // Combo system
 export const COMBO_WINDOW = 5000 // 5 seconds to continue combo
 
+// Oxygen/timer system
+export const OXYGEN_MAX = 100
+export const OXYGEN_DRAIN_PER_SECOND = 2.5  // Drains fully in 40 seconds with no words
+export const OXYGEN_REFILL_BASE = 15        // Base refill for a 2-letter word
+export const OXYGEN_REFILL_PER_LETTER = 5   // Additional refill per letter beyond 2
+export const OXYGEN_REFILL_PER_POINT = 0.3  // Bonus refill based on word score
+
 // Level progression thresholds
 export const LEVEL_THRESHOLDS = [0, 100, 300, 600, 1000, 1500, 2200, 3000, 4000, 5500]
 
