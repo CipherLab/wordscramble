@@ -121,8 +121,8 @@ function gameLoop() {
   // Check bomb timers
   game.processBombTimers()
 
-  // Clear canvas
-  renderer.clearCanvas(ctx, physics.canvasWidth.value, physics.canvasHeight.value)
+  // Clear canvas (with oxygen-based danger coloring)
+  renderer.clearCanvas(ctx, physics.canvasWidth.value, physics.canvasHeight.value, game.oxygenPercent.value)
 
   // Render current word in background
   renderer.renderWordBackground(

@@ -9,6 +9,7 @@ import {
   BOMB_CHANCE,
   MULTIPLY_3X_CHANCE,
   MULTIPLY_2X_CHANCE,
+  STONE_CHANCE,
   EXPLOSION_FORCE,
   EXPLOSION_RADIUS_MULTIPLIER,
   BOMB_FUSE_DELAY,
@@ -50,8 +51,12 @@ export function useHexGemGame(
   const selectionVersion = ref(0)
 
   // Oxygen/timer system
-  const oxygen = ref(OXYGEN_MAX)
+  const oxygen = ref(OXYGEN_MAX)           // Actual oxygen value (for game logic)
+  const displayedOxygen = ref(OXYGEN_MAX)  // Smoothly interpolated value (for rendering)
   let lastOxygenUpdate = 0
+  let gameStartTime = 0
+  const OXYGEN_LERP_SPEED = 150 // How fast displayed oxygen catches up (percent per second)
+  const OXYGEN_GRACE_PERIOD = 10000 // 10 seconds before oxygen starts draining
 
   // Internal game state (not reactive for performance)
   let gems: HexGem[] = []
@@ -107,7 +112,7 @@ export function useHexGemGame(
   })
 
   const oxygenPercent = computed(() => {
-    return (oxygen.value / OXYGEN_MAX) * 100
+    return (displayedOxygen.value / OXYGEN_MAX) * 100
   })
 
   // Get a random letter for endless mode
@@ -190,6 +195,11 @@ export function useHexGemGame(
       gems.push(gem)
       Matter.Composite.add(engine.world, gem.body)
       return
+    } else if (roll < BOMB_CHANCE + MULTIPLY_3X_CHANCE + MULTIPLY_2X_CHANCE + STONE_CHANCE) {
+      const gem = createGemBody(x, y, '', 'stone')
+      gems.push(gem)
+      Matter.Composite.add(engine.world, gem.body)
+      return
     }
 
     // Normal letter gem - use bag if available, otherwise endless mode
@@ -247,6 +257,7 @@ export function useHexGemGame(
   // Select a gem
   function selectGem(gem: HexGem) {
     if (gem.selected) return
+    if (gem.gemType === 'stone') return // Stones can't be selected
 
     // Check if this gem is adjacent to the last selected gem
     if (selectedGems.length > 0) {
@@ -344,14 +355,28 @@ export function useHexGemGame(
     const now = performance.now()
     if (lastOxygenUpdate === 0) {
       lastOxygenUpdate = now
+      gameStartTime = now
       return
     }
 
     const deltaSeconds = (now - lastOxygenUpdate) / 1000
     lastOxygenUpdate = now
 
-    // Drain oxygen
-    oxygen.value = Math.max(0, oxygen.value - OXYGEN_DRAIN_PER_SECOND * deltaSeconds)
+    // Only drain oxygen after grace period
+    const timeSinceStart = now - gameStartTime
+    if (timeSinceStart > OXYGEN_GRACE_PERIOD) {
+      oxygen.value = Math.max(0, oxygen.value - OXYGEN_DRAIN_PER_SECOND * deltaSeconds)
+    }
+
+    // Smoothly interpolate displayed oxygen towards actual oxygen
+    const diff = oxygen.value - displayedOxygen.value
+    if (Math.abs(diff) > 0.1) {
+      // Lerp speed: faster when difference is larger
+      const lerpAmount = OXYGEN_LERP_SPEED * deltaSeconds
+      displayedOxygen.value += Math.sign(diff) * Math.min(Math.abs(diff), lerpAmount)
+    } else {
+      displayedOxygen.value = oxygen.value
+    }
 
     // Check for game over
     if (oxygen.value <= 0) {
@@ -621,7 +646,9 @@ export function useHexGemGame(
     wordsThisLevel.value = 0
     selectionVersion.value = 0
     oxygen.value = OXYGEN_MAX
+    displayedOxygen.value = OXYGEN_MAX
     lastOxygenUpdate = 0
+    gameStartTime = 0
 
     // Clear existing gems
     if (engine) {

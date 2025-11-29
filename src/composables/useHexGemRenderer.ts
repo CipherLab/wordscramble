@@ -74,6 +74,9 @@ export function useHexGemRenderer() {
     } else if (gem.gemType === 'multiply2x') {
       gradient.addColorStop(0, '#69f0ae')
       gradient.addColorStop(1, '#00c853')
+    } else if (gem.gemType === 'stone') {
+      gradient.addColorStop(0, '#5a5a6e')
+      gradient.addColorStop(1, '#3a3a4e')
     } else {
       const baseColor = getGemColor(gem.points, gem.selected)
       const highlightColor = getGemBorderColor(gem.points, gem.selected)
@@ -87,6 +90,10 @@ export function useHexGemRenderer() {
     if (gem.selected) {
       ctx.strokeStyle = '#0288d1'
       ctx.lineWidth = 3
+      ctx.shadowBlur = 0
+    } else if (gem.gemType === 'stone') {
+      ctx.strokeStyle = '#4a4a5e'
+      ctx.lineWidth = 2
       ctx.shadowBlur = 0
     } else if (gem.gemType === 'bomb') {
       // Bomb pulses faster and glows more as fuse runs down
@@ -157,6 +164,19 @@ export function useHexGemRenderer() {
       ctx.fillStyle = '#fff'
       ctx.font = 'bold 22px Arial'
       ctx.fillText('×2', 0, 0)
+    } else if (gem.gemType === 'stone') {
+      // Draw crack pattern on stone
+      ctx.strokeStyle = '#2a2a3e'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.moveTo(-8, -10)
+      ctx.lineTo(0, 0)
+      ctx.lineTo(6, -8)
+      ctx.moveTo(0, 0)
+      ctx.lineTo(-4, 12)
+      ctx.moveTo(0, 0)
+      ctx.lineTo(10, 5)
+      ctx.stroke()
     } else {
       // Draw letter
       ctx.fillStyle = gem.selected ? '#fff' : '#333'
@@ -307,10 +327,41 @@ export function useHexGemRenderer() {
     return completedAnims
   }
 
-  // Clear canvas with background color
-  function clearCanvas(ctx: CanvasRenderingContext2D, width: number, height: number) {
-    ctx.fillStyle = '#1a1a2e'
-    ctx.fillRect(0, 0, width, height)
+  // Clear canvas with background color (shows oxygen danger from bottom)
+  function clearCanvas(ctx: CanvasRenderingContext2D, width: number, height: number, oxygenPercent: number = 100) {
+    // Calculate how much of the screen should be "danger" colored
+    // As oxygen drops, red creeps up from the bottom
+    const dangerHeight = ((100 - oxygenPercent) / 100) * height
+
+    if (dangerHeight <= 0) {
+      // Full oxygen - normal background
+      ctx.fillStyle = '#1a1a2e'
+      ctx.fillRect(0, 0, width, height)
+    } else {
+      // Draw normal background at top
+      ctx.fillStyle = '#1a1a2e'
+      ctx.fillRect(0, 0, width, height - dangerHeight)
+
+      // Draw gradient from normal to danger at the transition
+      const gradientHeight = Math.min(80, dangerHeight)
+      const gradient = ctx.createLinearGradient(0, height - dangerHeight - gradientHeight, 0, height - dangerHeight + gradientHeight)
+
+      // Color intensity based on how critical oxygen is
+      const intensity = Math.min(1, (100 - oxygenPercent) / 50) // Full intensity at 50% oxygen
+      const r = Math.floor(26 + (80 * intensity))  // 1a -> ~66
+      const g = Math.floor(26 - (20 * intensity))  // 1a -> ~0a
+      const b = Math.floor(46 - (30 * intensity))  // 2e -> ~10
+
+      gradient.addColorStop(0, '#1a1a2e')
+      gradient.addColorStop(1, `rgb(${r}, ${g}, ${b})`)
+
+      ctx.fillStyle = gradient
+      ctx.fillRect(0, height - dangerHeight - gradientHeight, width, gradientHeight * 2)
+
+      // Fill danger zone at bottom
+      ctx.fillStyle = `rgb(${r}, ${g}, ${b})`
+      ctx.fillRect(0, height - dangerHeight + gradientHeight, width, dangerHeight - gradientHeight)
+    }
   }
 
   // Render current word in center of canvas as subtle background

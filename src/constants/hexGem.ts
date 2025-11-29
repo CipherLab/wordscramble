@@ -11,6 +11,7 @@ export const MAX_GEMS_ON_SCREEN = 50
 export const BOMB_CHANCE = 0.03        // 3% chance for bomb
 export const MULTIPLY_3X_CHANCE = 0.02 // 2% chance for 3x multiplier
 export const MULTIPLY_2X_CHANCE = 0.05 // 5% chance for 2x multiplier
+export const STONE_CHANCE = 0.08       // 8% chance for stone blocker
 
 // Animation
 export const POP_DURATION = 200  // ms per gem pop

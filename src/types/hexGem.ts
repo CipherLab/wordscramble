@@ -1,6 +1,6 @@
 import type Matter from 'matter-js'
 
-export type GemType = 'normal' | 'bomb' | 'multiply2x' | 'multiply3x'
+export type GemType = 'normal' | 'bomb' | 'multiply2x' | 'multiply3x' | 'stone'
 
 export interface HexGem {
   id: string
