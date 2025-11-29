@@ -36,7 +36,7 @@
 import { computed } from 'vue'
 import { useQuasar } from 'quasar'
 import type { Letter } from '../types/game'
-import { getLetterColor } from '../utils/letterColors'
+import { getLetterColor } from './utils/letterColors'
 
 interface Props {
   letter: Letter

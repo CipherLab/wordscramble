@@ -5,6 +5,7 @@ import { useQuasar } from 'quasar'
 import { useGameStore } from './stores/gameStore'
 import { loadDictionary } from './constants/dictionary'
 import GameBoard from './components/GameBoard.vue'
+import HexGemGame from './components/HexGemGame.vue'
 import DailyLeaderboard from './components/DailyLeaderboard.vue'
 import type { GameMode } from './stores/gameStore'
 
@@ -14,6 +15,7 @@ const gameStore = useGameStore()
 const dictionaryLoading = ref(true)
 const dictionaryError = ref<string | null>(null)
 const showLeaderboardDialog = ref(false)
+const isHexMode = ref(false)
 
 // Dark mode setup
 const isDarkMode = ref($q.dark.isActive)
@@ -34,9 +36,13 @@ onMounted(async () => {
 
   try {
     await loadDictionary()
-    // Start game based on current route
-    const mode = (route.meta.mode as GameMode) || 'random'
-    gameStore.startGame(mode)
+    // Check if hex mode
+    isHexMode.value = route.meta.mode === 'hex'
+    // Start game based on current route (only for non-hex modes)
+    if (!isHexMode.value) {
+      const mode = (route.meta.mode as GameMode) || 'random'
+      gameStore.startGame(mode)
+    }
   } catch (error) {
     dictionaryError.value = error instanceof Error ? error.message : 'Failed to load dictionary'
   } finally {
@@ -47,8 +53,11 @@ onMounted(async () => {
 // Watch for route changes and start game with appropriate mode
 watch(() => route.path, () => {
   if (!dictionaryLoading.value && !dictionaryError.value) {
-    const mode = (route.meta.mode as GameMode) || 'random'
-    gameStore.startGame(mode)
+    isHexMode.value = route.meta.mode === 'hex'
+    if (!isHexMode.value) {
+      const mode = (route.meta.mode as GameMode) || 'random'
+      gameStore.startGame(mode)
+    }
   }
 })
 
@@ -79,7 +88,7 @@ function formatDate(dateString: string): string {
         <q-btn-group flat>
           <q-btn
             flat
-            :outline="gameStore.gameMode === 'random'"
+            :outline="gameStore.gameMode === 'random' && !isHexMode"
             label="Random"
             :to="'/'"
           >
@@ -87,15 +96,23 @@ function formatDate(dateString: string): string {
           </q-btn>
           <q-btn
             flat
-            :outline="gameStore.gameMode === 'daily'"
+            :outline="gameStore.gameMode === 'daily' && !isHexMode"
             label="Daily"
             :to="'/daily'"
           >
             <q-tooltip>Daily puzzle - same for everyone today</q-tooltip>
           </q-btn>
+          <q-btn
+            flat
+            :outline="isHexMode"
+            label="Hex"
+            :to="'/hex'"
+          >
+            <q-tooltip>Physics-based hex gem word game</q-tooltip>
+          </q-btn>
         </q-btn-group>
         <q-btn
-          v-if="gameStore.gameMode === 'daily'"
+          v-if="gameStore.gameMode === 'daily' && !isHexMode"
           flat
           round
           dense
@@ -105,6 +122,7 @@ function formatDate(dateString: string): string {
           <q-tooltip>View Leaderboard</q-tooltip>
         </q-btn>
         <q-btn
+          v-if="!isHexMode"
           flat
           round
           dense
@@ -146,6 +164,7 @@ function formatDate(dateString: string): string {
         </div>
 
         <!-- Game Board -->
+        <HexGemGame v-else-if="isHexMode" />
         <GameBoard v-else />
       </q-page>
     </q-page-container>

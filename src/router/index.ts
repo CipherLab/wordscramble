@@ -19,6 +19,12 @@ const router = createRouter({
       name: 'daily',
       component: EmptyComponent,
       meta: { mode: 'daily' as GameMode }
+    },
+    {
+      path: '/hex',
+      name: 'hex',
+      component: EmptyComponent,
+      meta: { mode: 'hex' }
     }
   ]
 })

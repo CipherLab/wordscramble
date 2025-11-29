@@ -73,7 +73,10 @@
             opacity: 1 - index * 0.3,
             background: `linear-gradient(135deg, ${
               getLetterColor(getLetterPoints(letter), $q.dark.isActive).base
-            }, ${getLetterColor(getLetterPoints(letter), $q.dark.isActive).highlight})`,
+            }, ${
+              getLetterColor(getLetterPoints(letter), $q.dark.isActive)
+                .highlight
+            })`,
           }"
         >
           <div class="upcoming-letter-text">{{ letter }}</div>
@@ -181,7 +184,10 @@
               :style="{
                 background: `linear-gradient(145deg, ${
                   getLetterColor(getLetterPoints(letter), $q.dark.isActive).base
-                }, ${getLetterColor(getLetterPoints(letter), $q.dark.isActive).highlight})`,
+                }, ${
+                  getLetterColor(getLetterPoints(letter), $q.dark.isActive)
+                    .highlight
+                })`,
               }"
             >
               <span class="letter-label">{{ letter }}</span>
@@ -229,7 +235,7 @@ import { useGameStore } from "../stores/gameStore";
 import LetterTile from "./LetterTile.vue";
 import DailyLeaderboard from "./DailyLeaderboard.vue";
 import { getLetterPoints } from "../constants/scrabble";
-import { getLetterColor } from "../utils/letterColors";
+import { getLetterColor } from "./utils/letterColors";
 
 const $q = useQuasar();
 const gameStore = useGameStore();
