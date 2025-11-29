@@ -34,7 +34,7 @@ export function getGemBorderColor(points: number, selected: boolean): string {
 
 export function useHexGemRenderer() {
   // Render a single gem (normal, not animating)
-  function renderGem(ctx: CanvasRenderingContext2D, gem: HexGem) {
+  function renderGem(ctx: CanvasRenderingContext2D, gem: HexGem, fuseProgress: number = 0) {
     const pos = gem.body.position
     const angle = gem.body.angle
 
@@ -62,7 +62,11 @@ export function useHexGemRenderer() {
       gradient.addColorStop(0, '#4fc3f7')
       gradient.addColorStop(1, '#0288d1')
     } else if (gem.gemType === 'bomb') {
-      gradient.addColorStop(0, '#ff6b35')
+      // Bomb color intensifies as fuse runs down
+      const r = Math.floor(255 - fuseProgress * 50)
+      const g = Math.floor(107 - fuseProgress * 80)
+      const b = Math.floor(53 - fuseProgress * 53)
+      gradient.addColorStop(0, `rgb(${r}, ${g}, ${b})`)
       gradient.addColorStop(1, '#d32f2f')
     } else if (gem.gemType === 'multiply3x') {
       gradient.addColorStop(0, '#e040fb')
@@ -85,10 +89,14 @@ export function useHexGemRenderer() {
       ctx.lineWidth = 3
       ctx.shadowBlur = 0
     } else if (gem.gemType === 'bomb') {
-      ctx.strokeStyle = '#ffab00'
-      ctx.lineWidth = 3
-      ctx.shadowColor = '#ff6b35'
-      ctx.shadowBlur = 10
+      // Bomb pulses faster and glows more as fuse runs down
+      const pulseSpeed = 2 + fuseProgress * 8
+      const pulse = Math.sin(performance.now() / 1000 * pulseSpeed * Math.PI) * 0.5 + 0.5
+      const glowIntensity = 10 + fuseProgress * 20 + pulse * 10
+      ctx.strokeStyle = fuseProgress > 0.7 ? '#ff0000' : '#ffab00'
+      ctx.lineWidth = 3 + pulse * 2
+      ctx.shadowColor = fuseProgress > 0.7 ? '#ff0000' : '#ff6b35'
+      ctx.shadowBlur = glowIntensity
     } else if (gem.gemType === 'multiply3x') {
       ctx.strokeStyle = '#ea80fc'
       ctx.lineWidth = 3
@@ -128,6 +136,19 @@ export function useHexGemRenderer() {
     if (gem.gemType === 'bomb') {
       ctx.font = 'bold 28px Arial'
       ctx.fillText('💣', 0, 0)
+
+      // Draw fuse timer ring (shrinks as time runs out)
+      if (fuseProgress > 0) {
+        ctx.rotate(angle) // Re-rotate for the ring
+        const remainingAngle = (1 - fuseProgress) * Math.PI * 2
+        ctx.beginPath()
+        ctx.arc(0, 0, HEX_RADIUS - 5, -Math.PI / 2, -Math.PI / 2 + remainingAngle)
+        ctx.strokeStyle = fuseProgress > 0.7 ? '#ff0000' : '#ffcc00'
+        ctx.lineWidth = 6
+        ctx.shadowBlur = 0
+        ctx.stroke()
+        ctx.rotate(-angle)
+      }
     } else if (gem.gemType === 'multiply3x') {
       ctx.fillStyle = '#fff'
       ctx.font = 'bold 22px Arial'
@@ -156,12 +177,14 @@ export function useHexGemRenderer() {
     ctx: CanvasRenderingContext2D,
     gems: HexGem[],
     selectedGems: HexGem[],
-    animatingGemIds: Set<string>
+    animatingGemIds: Set<string>,
+    getBombFuseProgress?: (gem: HexGem) => number
   ) {
     for (const gem of gems) {
       // Skip gems that are currently animating (they're rendered separately)
       if (animatingGemIds.has(gem.id)) continue
-      renderGem(ctx, gem)
+      const fuseProgress = getBombFuseProgress ? getBombFuseProgress(gem) : 0
+      renderGem(ctx, gem, fuseProgress)
     }
 
     // Draw selection lines

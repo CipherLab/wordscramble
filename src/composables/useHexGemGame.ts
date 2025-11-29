@@ -11,6 +11,7 @@ import {
   MULTIPLY_2X_CHANCE,
   EXPLOSION_FORCE,
   EXPLOSION_RADIUS_MULTIPLIER,
+  BOMB_FUSE_DELAY,
   BOMB_FUSE_TIME,
   POP_STAGGER,
   COMBO_WINDOW,
@@ -39,6 +40,9 @@ export function useHexGemGame(
   const lastWordTime = ref(0)
   const level = ref(1)
   const wordsThisLevel = ref(0)
+
+  // Selection tracking for reactivity (increments on selection changes)
+  const selectionVersion = ref(0)
 
   // Internal game state (not reactive for performance)
   let gems: HexGem[] = []
@@ -76,6 +80,10 @@ export function useHexGemGame(
   })
 
   const potentialScore = computed(() => {
+    // Include selectionVersion to trigger reactivity when selection changes
+    // (important for multiplier gems which don't change currentWord)
+    void selectionVersion.value
+
     if (currentWord.value.length < 1) return 0
     const basePoints = calculateWordScore(currentWord.value)
 
@@ -238,6 +246,7 @@ export function useHexGemGame(
     gem.selected = true
     gem.selectionOrder = selectedGems.length
     selectedGems.push(gem)
+    selectionVersion.value++
     updateCurrentWord()
   }
 
@@ -248,6 +257,7 @@ export function useHexGemGame(
     const gem = selectedGems.pop()!
     gem.selected = false
     gem.selectionOrder = -1
+    selectionVersion.value++
     updateCurrentWord()
   }
 
@@ -266,6 +276,7 @@ export function useHexGemGame(
       gem.selectionOrder = -1
     }
     selectedGems = []
+    selectionVersion.value++
     currentWord.value = ''
   }
 
@@ -412,7 +423,8 @@ export function useHexGemGame(
     for (const gem of gems) {
       if (gem.gemType === 'bomb' && gem.spawnTime && !gem.selected && !animatingIds.has(gem.id)) {
         const elapsed = now - gem.spawnTime
-        if (elapsed >= BOMB_FUSE_TIME) {
+        // Total time = delay + fuse time
+        if (elapsed >= BOMB_FUSE_DELAY + BOMB_FUSE_TIME) {
           triggerDestructiveExplosion(gem)
         }
       }
@@ -420,10 +432,15 @@ export function useHexGemGame(
   }
 
   // Get bomb fuse progress (0 to 1) for rendering
+  // Returns 0 during delay period, then 0-1 during fuse period
   function getBombFuseProgress(gem: HexGem): number {
     if (gem.gemType !== 'bomb' || !gem.spawnTime) return 0
     const elapsed = performance.now() - gem.spawnTime
-    return Math.min(1, elapsed / BOMB_FUSE_TIME)
+    // No progress during delay period
+    if (elapsed < BOMB_FUSE_DELAY) return 0
+    // Progress during fuse period
+    const fuseElapsed = elapsed - BOMB_FUSE_DELAY
+    return Math.min(1, fuseElapsed / BOMB_FUSE_TIME)
   }
 
   // Submit word
@@ -552,6 +569,7 @@ export function useHexGemGame(
     lastWordTime.value = 0
     level.value = 1
     wordsThisLevel.value = 0
+    selectionVersion.value = 0
 
     // Clear existing gems
     if (engine) {
@@ -624,6 +642,7 @@ export function useHexGemGame(
     clearSelection,
     submitWord,
     updateComboTimer,
+    processBombTimers,
     processAnimationsAndCleanup,
     getGemAtPosition,
     areGemsAdjacent,
@@ -632,6 +651,7 @@ export function useHexGemGame(
     getGems,
     getSelectedGems,
     getPopAnimations,
-    getAnimatingGemIds
+    getAnimatingGemIds,
+    getBombFuseProgress
   }
 }

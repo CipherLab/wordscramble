@@ -104,6 +104,9 @@ function gameLoop() {
   // Update combo timer
   game.updateComboTimer()
 
+  // Check bomb timers
+  game.processBombTimers()
+
   // Clear canvas
   renderer.clearCanvas(ctx, physics.canvasWidth.value, physics.canvasHeight.value)
 
@@ -122,7 +125,8 @@ function gameLoop() {
     ctx,
     game.getGems(),
     game.getSelectedGems(),
-    game.getAnimatingGemIds()
+    game.getAnimatingGemIds(),
+    game.getBombFuseProgress
   )
 
   // Process and render pop animations
