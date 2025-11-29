@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@google/genai": "^1.30.0",
     "@quasar/extras": "^1.17.0",
     "firebase": "^12.6.0",
     "matter-js": "^0.20.0",

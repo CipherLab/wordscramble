@@ -25,6 +25,12 @@ const router = createRouter({
       name: 'hex',
       component: EmptyComponent,
       meta: { mode: 'hex' }
+    },
+    {
+      path: '/consequences',
+      name: 'consequences',
+      component: EmptyComponent,
+      meta: { mode: 'consequences' }
     }
   ]
 })

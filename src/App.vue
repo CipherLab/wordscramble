@@ -6,6 +6,7 @@ import { useGameStore } from './stores/gameStore'
 import { loadDictionary } from './constants/dictionary'
 import GameBoard from './components/GameBoard.vue'
 import HexGemGame from './components/HexGemGame.vue'
+import ConsequencesGame from './components/consequences/ConsequencesGame.vue'
 import DailyLeaderboard from './components/DailyLeaderboard.vue'
 import type { GameMode } from './stores/gameStore'
 
@@ -16,6 +17,7 @@ const dictionaryLoading = ref(true)
 const dictionaryError = ref<string | null>(null)
 const showLeaderboardDialog = ref(false)
 const isHexMode = ref(false)
+const isConsequencesMode = ref(false)
 
 // Dark mode setup
 const isDarkMode = ref($q.dark.isActive)
@@ -36,10 +38,11 @@ onMounted(async () => {
 
   try {
     await loadDictionary()
-    // Check if hex mode
+    // Check mode
     isHexMode.value = route.meta.mode === 'hex'
-    // Start game based on current route (only for non-hex modes)
-    if (!isHexMode.value) {
+    isConsequencesMode.value = route.meta.mode === 'consequences'
+    // Start game based on current route (only for word scramble modes)
+    if (!isHexMode.value && !isConsequencesMode.value) {
       const mode = (route.meta.mode as GameMode) || 'random'
       gameStore.startGame(mode)
     }
@@ -54,7 +57,8 @@ onMounted(async () => {
 watch(() => route.path, () => {
   if (!dictionaryLoading.value && !dictionaryError.value) {
     isHexMode.value = route.meta.mode === 'hex'
-    if (!isHexMode.value) {
+    isConsequencesMode.value = route.meta.mode === 'consequences'
+    if (!isHexMode.value && !isConsequencesMode.value) {
       const mode = (route.meta.mode as GameMode) || 'random'
       gameStore.startGame(mode)
     }
@@ -110,9 +114,17 @@ function formatDate(dateString: string): string {
           >
             <q-tooltip>Physics-based hex gem word game</q-tooltip>
           </q-btn>
+          <q-btn
+            flat
+            :outline="isConsequencesMode"
+            label="Consequences"
+            :to="'/consequences'"
+          >
+            <q-tooltip>Mad Libs: Consequences party game</q-tooltip>
+          </q-btn>
         </q-btn-group>
         <q-btn
-          v-if="gameStore.gameMode === 'daily' && !isHexMode"
+          v-if="gameStore.gameMode === 'daily' && !isHexMode && !isConsequencesMode"
           flat
           round
           dense
@@ -122,7 +134,7 @@ function formatDate(dateString: string): string {
           <q-tooltip>View Leaderboard</q-tooltip>
         </q-btn>
         <q-btn
-          v-if="!isHexMode"
+          v-if="!isHexMode && !isConsequencesMode"
           flat
           round
           dense
@@ -164,6 +176,7 @@ function formatDate(dateString: string): string {
         </div>
 
         <!-- Game Board -->
+        <ConsequencesGame v-else-if="isConsequencesMode" />
         <HexGemGame v-else-if="isHexMode" />
         <GameBoard v-else />
       </q-page>
