@@ -1,161 +1,130 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, watch } from 'vue'
 import { useConsequencesStore } from '../../stores/consequencesStore'
 
 const store = useConsequencesStore()
 
-// Track input values locally
-const inputs = ref<Record<string, string>>({})
+const currentWord = ref('')
+const showPassScreen = ref(false)
+const lastPlayerIndex = ref(-1)
 
-// Check which prompts are already submitted
-const submittedPromptIds = computed(() =>
-  store.myCurrentRoundSubmissions.map((s) => s.promptId)
-)
-
-// Submit a single word
-async function submitWord(promptId: string) {
-  const word = inputs.value[promptId]?.trim()
-  if (!word) return
-  await store.submitWord(promptId, word)
-}
-
-// Submit all words at once
-async function submitAll() {
-  for (const prompt of store.currentPrompts) {
-    if (!submittedPromptIds.value.includes(prompt.id)) {
-      const word = inputs.value[prompt.id]?.trim()
-      if (word) {
-        await store.submitWord(prompt.id, word)
-      }
-    }
+// Show pass screen when player changes
+watch(() => store.currentPlayerIndex, (newIndex, oldIndex) => {
+  if (oldIndex !== undefined && newIndex !== oldIndex && newIndex > 0) {
+    showPassScreen.value = true
   }
+  lastPlayerIndex.value = newIndex
+})
+
+function submitWord() {
+  const word = currentWord.value.trim()
+  if (!word) return
+
+  store.submitWord(word)
+  currentWord.value = ''
 }
 
-// Count submitted players
-const submissionProgress = computed(() => {
-  if (!store.game) return { submitted: 0, total: 0 }
-  const expectedPerPlayer = store.currentPrompts.length
-  const playerSubmissions = new Map<string, number>()
-
-  store.currentRoundSubmissions.forEach((s) => {
-    playerSubmissions.set(s.playerId, (playerSubmissions.get(s.playerId) || 0) + 1)
-  })
-
-  let fullySubmitted = 0
-  store.game.players.forEach((p) => {
-    if ((playerSubmissions.get(p.id) || 0) >= expectedPerPlayer) {
-      fullySubmitted++
-    }
-  })
-
-  return { submitted: fullySubmitted, total: store.game.players.length }
-})
-
-// All inputs filled
-const allFilled = computed(() => {
-  return store.currentPrompts.every((p) => {
-    if (submittedPromptIds.value.includes(p.id)) return true
-    return inputs.value[p.id]?.trim()
-  })
-})
+function continueAfterPass() {
+  showPassScreen.value = false
+}
 </script>
 
 <template>
   <div class="submit-phase">
-    <div class="text-center q-mb-lg">
-      <p class="text-overline">ROUND {{ store.currentRound }} of {{ store.game?.totalRounds }}</p>
-      <h2 class="text-h4">Submit Your Words</h2>
-      <q-badge :color="store.currentRound <= 2 ? 'positive' : store.currentRound <= 4 ? 'warning' : 'negative'">
-        {{ store.chaosLevel }}
-      </q-badge>
-    </div>
-
-    <q-card class="q-pa-md q-mb-lg">
-      <div v-for="prompt in store.currentPrompts" :key="prompt.id" class="q-mb-md">
-        <template v-if="submittedPromptIds.includes(prompt.id)">
-          <q-input
-            :model-value="store.mySubmissions.get(prompt.id)"
-            :label="`${prompt.type.toUpperCase()}: ${prompt.hint}`"
-            outlined
-            readonly
-            bg-color="positive"
-            class="submitted-input"
-          >
-            <template v-slot:append>
-              <q-icon name="check" color="positive" />
-            </template>
-          </q-input>
-        </template>
-        <template v-else>
-          <q-input
-            v-model="inputs[prompt.id]"
-            :label="`${prompt.type.toUpperCase()}: ${prompt.hint}`"
-            outlined
-            @keyup.enter="submitWord(prompt.id)"
-          >
-            <template v-slot:append>
-              <q-btn
-                flat
-                dense
-                icon="send"
-                color="primary"
-                :disable="!inputs[prompt.id]?.trim()"
-                @click="submitWord(prompt.id)"
-              />
-            </template>
-          </q-input>
-        </template>
-      </div>
-
+    <!-- Pass the device screen -->
+    <div v-if="showPassScreen" class="pass-screen text-center">
+      <q-icon name="smartphone" size="80px" color="primary" class="q-mb-lg" />
+      <h2 class="text-h4 q-mb-md">Pass to {{ store.currentPlayer?.name }}</h2>
+      <p class="text-grey q-mb-xl">Don't peek at their words!</p>
       <q-btn
-        v-if="!store.hasSubmittedAllPrompts"
         color="primary"
         size="lg"
-        class="full-width q-mt-md"
-        label="Submit All"
-        :disable="!allFilled"
-        @click="submitAll"
+        label="I'm Ready"
+        @click="continueAfterPass"
       />
-    </q-card>
+    </div>
 
-    <q-card class="q-pa-md">
-      <div class="text-subtitle2 q-mb-sm">Waiting for players...</div>
-      <q-linear-progress
-        :value="submissionProgress.submitted / submissionProgress.total"
-        color="primary"
-        class="q-mb-sm"
-      />
-      <div class="text-caption text-grey text-center">
-        {{ submissionProgress.submitted }} / {{ submissionProgress.total }} players submitted
+    <!-- Word input screen -->
+    <template v-else>
+      <div class="text-center q-mb-lg">
+        <p class="text-overline">
+          ROUND {{ store.currentRound }} of {{ store.game?.totalRounds }}
+        </p>
+        <q-badge
+          :color="store.currentRound <= 2 ? 'positive' : store.currentRound <= 4 ? 'warning' : 'negative'"
+          class="q-mb-md"
+        >
+          {{ store.chaosLevel }}
+        </q-badge>
       </div>
 
-      <q-list dense class="q-mt-md">
-        <q-item v-for="player in store.game?.players" :key="player.id">
-          <q-item-section avatar>
-            <q-icon
-              :name="
-                store.currentRoundSubmissions.filter((s) => s.playerId === player.id).length >=
-                store.currentPrompts.length
-                  ? 'check_circle'
-                  : 'hourglass_empty'
-              "
-              :color="
-                store.currentRoundSubmissions.filter((s) => s.playerId === player.id).length >=
-                store.currentPrompts.length
-                  ? 'positive'
-                  : 'grey'
-              "
-            />
-          </q-item-section>
-          <q-item-section>
-            {{ player.name }}
-            <span v-if="player.id === store.playerId" class="text-caption text-primary">
-              (you)
-            </span>
-          </q-item-section>
-        </q-item>
-      </q-list>
-    </q-card>
+      <q-card class="prompt-card q-pa-lg q-mb-lg text-center">
+        <div class="player-turn q-mb-lg">
+          <q-avatar size="60px" color="primary" text-color="white" class="q-mb-sm">
+            {{ store.currentPlayer?.name?.charAt(0)?.toUpperCase() }}
+          </q-avatar>
+          <h3 class="text-h5 q-mb-none">{{ store.currentPlayer?.name }}'s turn</h3>
+        </div>
+
+        <div class="prompt-request q-mb-lg">
+          <p class="text-overline text-grey q-mb-xs">Enter a...</p>
+          <h2 class="text-h3 text-weight-bold text-primary q-mb-sm">
+            {{ store.currentPrompt?.type?.toUpperCase() }}
+          </h2>
+          <p class="text-subtitle1 text-grey">
+            {{ store.currentPrompt?.hint }}
+          </p>
+        </div>
+
+        <q-input
+          v-model="currentWord"
+          outlined
+          autofocus
+          placeholder="Type your word..."
+          class="word-input q-mb-md"
+          @keyup.enter="submitWord"
+        />
+
+        <q-btn
+          color="primary"
+          size="lg"
+          class="full-width"
+          label="Submit"
+          :disable="!currentWord.trim()"
+          @click="submitWord"
+        />
+
+        <div class="progress-indicator q-mt-lg">
+          <div class="text-caption text-grey q-mb-xs">
+            Prompt {{ store.currentPromptIndex + 1 }} of {{ store.currentPrompts.length }}
+          </div>
+          <q-linear-progress
+            :value="(store.currentPromptIndex + 1) / store.currentPrompts.length"
+            color="primary"
+            track-color="grey-3"
+          />
+        </div>
+      </q-card>
+
+      <q-card class="q-pa-sm" flat bordered>
+        <div class="player-progress">
+          <span
+            v-for="(player, i) in store.players"
+            :key="player.id"
+            class="player-dot"
+            :class="{
+              'active': i === store.currentPlayerIndex,
+              'done': i < store.currentPlayerIndex
+            }"
+          >
+            <q-tooltip>{{ player.name }}</q-tooltip>
+          </span>
+        </div>
+        <div class="text-caption text-center text-grey">
+          {{ store.currentPlayerIndex + 1 }} / {{ store.players.length }} players
+        </div>
+      </q-card>
+    </template>
   </div>
 </template>
 
@@ -164,7 +133,45 @@ const allFilled = computed(() => {
   padding-top: 1rem;
 }
 
-.submitted-input :deep(.q-field__control) {
-  background: rgba(33, 186, 69, 0.1) !important;
+.pass-screen {
+  padding: 4rem 2rem;
+}
+
+.prompt-card {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+:deep(.body--dark) .prompt-card {
+  background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+}
+
+.word-input :deep(input) {
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+.player-progress {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.player-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ddd;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.player-dot.active {
+  background: var(--q-primary);
+  transform: scale(1.3);
+}
+
+.player-dot.done {
+  background: #21ba45;
 }
 </style>

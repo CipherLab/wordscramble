@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
 import { useConsequencesStore } from '../../stores/consequencesStore'
 import LobbyPhase from './LobbyPhase.vue'
 import SubmitPhase from './SubmitPhase.vue'
@@ -8,15 +7,6 @@ import RevealPhase from './RevealPhase.vue'
 import CompletePhase from './CompletePhase.vue'
 
 const store = useConsequencesStore()
-
-onMounted(() => {
-  // Try to reconnect to existing game
-  store.tryReconnect()
-})
-
-onUnmounted(() => {
-  // Cleanup handled by store
-})
 </script>
 
 <template>
@@ -30,8 +20,8 @@ onUnmounted(() => {
       </q-banner>
     </div>
 
-    <!-- No game joined yet -->
-    <LobbyPhase v-if="!store.gameId || store.phase === 'lobby'" />
+    <!-- No game started yet -->
+    <LobbyPhase v-if="!store.game" />
 
     <!-- Submitting words -->
     <SubmitPhase v-else-if="store.phase === 'submitting'" />

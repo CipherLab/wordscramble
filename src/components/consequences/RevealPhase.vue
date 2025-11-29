@@ -37,14 +37,16 @@ const usedWords = computed(() =>
 const highlightedText = computed(() => {
   let text = displayedText.value
   usedWords.value.forEach((word) => {
-    const regex = new RegExp(`\\b(${word})\\b`, 'gi')
+    // Escape special regex chars in the word
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regex = new RegExp(`\\b(${escaped})\\b`, 'gi')
     text = text.replace(regex, '<mark>$1</mark>')
   })
   return text
 })
 
-async function handleNextRound() {
-  await store.nextRound()
+function handleNextRound() {
+  store.nextRound()
 }
 </script>
 
@@ -77,7 +79,7 @@ async function handleNextRound() {
       </div>
     </q-card>
 
-    <template v-if="!isTyping && store.isHost">
+    <template v-if="!isTyping">
       <q-btn
         v-if="store.currentRound < (store.game?.totalRounds || 5)"
         color="primary"
@@ -95,10 +97,6 @@ async function handleNextRound() {
         @click="handleNextRound"
       />
     </template>
-
-    <p v-else-if="!isTyping" class="text-center text-grey q-mt-md">
-      Waiting for host to continue...
-    </p>
   </div>
 </template>
 

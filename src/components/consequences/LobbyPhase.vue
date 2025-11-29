@@ -4,153 +4,133 @@ import { useConsequencesStore } from '../../stores/consequencesStore'
 
 const store = useConsequencesStore()
 
-const playerName = ref('')
-const gameCode = ref('')
-const showJoin = ref(false)
+const playerNames = ref<string[]>(['', ''])
 
-async function handleCreate() {
-  if (!playerName.value.trim()) return
-  await store.createGame(playerName.value.trim())
+function addPlayer() {
+  if (playerNames.value.length < 8) {
+    playerNames.value.push('')
+  }
 }
 
-async function handleJoin() {
-  if (!playerName.value.trim() || !gameCode.value.trim()) return
-  await store.joinGame(gameCode.value.trim(), playerName.value.trim())
+function removePlayer(index: number) {
+  if (playerNames.value.length > 2) {
+    playerNames.value.splice(index, 1)
+  }
 }
 
-async function handleStart() {
-  await store.startGame()
+function startGame() {
+  const validNames = playerNames.value
+    .map((n) => n.trim())
+    .filter((n) => n.length > 0)
+
+  if (validNames.length >= 2) {
+    store.startLocalGame(validNames)
+  }
 }
+
+const validPlayerCount = () =>
+  playerNames.value.filter((n) => n.trim().length > 0).length
 </script>
 
 <template>
   <div class="lobby-phase">
-    <!-- Not in a game yet -->
-    <template v-if="!store.gameId">
-      <div class="text-center q-mb-xl">
-        <h1 class="text-h3 q-mb-sm">Mad Libs: Consequences</h1>
-        <p class="text-subtitle1 text-grey">A chaotic storytelling party game</p>
-      </div>
+    <div class="text-center q-mb-xl">
+      <h1 class="text-h3 q-mb-sm">Mad Libs: Consequences</h1>
+      <p class="text-subtitle1 text-grey">A chaotic storytelling party game</p>
+      <p class="text-caption text-grey-6">Pass the device — each player enters words secretly</p>
+    </div>
 
-      <q-card class="q-pa-lg">
+    <q-card class="q-pa-lg">
+      <div class="text-h6 q-mb-md">Who's playing?</div>
+
+      <div v-for="(_, index) in playerNames" :key="index" class="player-row q-mb-sm">
         <q-input
-          v-model="playerName"
-          label="Your Name"
+          v-model="playerNames[index]"
+          :label="`Player ${index + 1}`"
           outlined
-          class="q-mb-md"
-          :disable="store.isLoading"
-        />
-
-        <template v-if="!showJoin">
-          <q-btn
-            color="primary"
-            size="lg"
-            class="full-width q-mb-md"
-            label="Create New Game"
-            :loading="store.isLoading"
-            :disable="!playerName.trim()"
-            @click="handleCreate"
-          />
-          <q-btn
-            flat
-            color="grey"
-            class="full-width"
-            label="Join Existing Game"
-            @click="showJoin = true"
-          />
-        </template>
-
-        <template v-else>
-          <q-input
-            v-model="gameCode"
-            label="Game Code"
-            outlined
-            class="q-mb-md"
-            :disable="store.isLoading"
-            mask="AAAA"
-            :rules="[(v) => v.length === 4 || 'Enter 4-character code']"
-          />
-          <q-btn
-            color="primary"
-            size="lg"
-            class="full-width q-mb-md"
-            label="Join Game"
-            :loading="store.isLoading"
-            :disable="!playerName.trim() || gameCode.length !== 4"
-            @click="handleJoin"
-          />
-          <q-btn
-            flat
-            color="grey"
-            class="full-width"
-            label="Back"
-            @click="showJoin = false"
-          />
-        </template>
-      </q-card>
-    </template>
-
-    <!-- In lobby, waiting to start -->
-    <template v-else-if="store.game">
-      <div class="text-center q-mb-lg">
-        <p class="text-overline text-grey">GAME CODE</p>
-        <h2 class="text-h2 text-weight-bold">{{ store.gameId }}</h2>
-        <p class="text-caption text-grey">Share this code with friends</p>
-      </div>
-
-      <q-card class="q-pa-md q-mb-lg">
-        <div class="text-subtitle2 q-mb-sm">Players ({{ store.game.players.length }})</div>
-        <q-list>
-          <q-item v-for="player in store.game.players" :key="player.id">
-            <q-item-section avatar>
-              <q-avatar color="primary" text-color="white">
-                {{ player.name.charAt(0).toUpperCase() }}
-              </q-avatar>
-            </q-item-section>
-            <q-item-section>
-              {{ player.name }}
-              <span v-if="player.id === store.game.hostId" class="text-caption text-grey">
-                (host)
-              </span>
-              <span v-if="player.id === store.playerId" class="text-caption text-primary">
-                (you)
-              </span>
-            </q-item-section>
-          </q-item>
-        </q-list>
-      </q-card>
-
-      <template v-if="store.isHost">
+          dense
+          class="player-input"
+        >
+          <template v-slot:prepend>
+            <q-avatar size="sm" color="primary" text-color="white">
+              {{ index + 1 }}
+            </q-avatar>
+          </template>
+        </q-input>
         <q-btn
-          color="primary"
-          size="lg"
-          class="full-width q-mb-md"
-          label="Start Game"
-          :loading="store.isLoading"
-          :disable="store.game.players.length < 2"
-          @click="handleStart"
+          v-if="playerNames.length > 2"
+          flat
+          round
+          dense
+          icon="close"
+          color="grey"
+          @click="removePlayer(index)"
         />
-        <p v-if="store.game.players.length < 2" class="text-center text-caption text-grey">
-          Need at least 2 players to start
-        </p>
-      </template>
-      <template v-else>
-        <p class="text-center text-grey">Waiting for host to start the game...</p>
-      </template>
+      </div>
 
       <q-btn
+        v-if="playerNames.length < 8"
         flat
-        color="negative"
-        class="full-width q-mt-lg"
-        label="Leave Game"
-        @click="store.leaveGame()"
+        color="primary"
+        icon="add"
+        label="Add Player"
+        class="q-mb-lg"
+        @click="addPlayer"
       />
-    </template>
+
+      <q-separator class="q-my-md" />
+
+      <q-btn
+        color="primary"
+        size="lg"
+        class="full-width"
+        label="Start Game"
+        :disable="validPlayerCount() < 2"
+        @click="startGame"
+      />
+
+      <p v-if="validPlayerCount() < 2" class="text-center text-caption text-grey q-mt-sm">
+        Need at least 2 players
+      </p>
+    </q-card>
+
+    <q-card class="q-pa-md q-mt-lg" flat bordered>
+      <div class="text-subtitle2 q-mb-sm">How to Play</div>
+      <ol class="rules-list">
+        <li>Each round, players take turns entering words <strong>without seeing the story</strong></li>
+        <li>After everyone submits, AI weaves the words into a deadpan narrative</li>
+        <li>Words from earlier rounds become "load-bearing" — the AI references them later</li>
+        <li>Chaos escalates each round. By round 5, expect callbacks to everything.</li>
+      </ol>
+    </q-card>
   </div>
 </template>
 
 <style scoped>
 .lobby-phase {
   padding-top: 2rem;
+}
+
+.player-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.player-input {
+  flex: 1;
+}
+
+.rules-list {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.rules-list li {
+  margin-bottom: 0.5rem;
+}
+
+.rules-list li:last-child {
+  margin-bottom: 0;
 }
 </style>
