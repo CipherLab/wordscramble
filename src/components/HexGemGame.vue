@@ -48,6 +48,8 @@
           <li>Tap and drag to connect letters</li>
           <li>Release to submit the word</li>
           <li>Longer words = more points!</li>
+          <li>💣 Bombs explode nearby gems</li>
+          <li><span style="color: #69f0ae">×2</span> and <span style="color: #e040fb">×3</span> multiply your score!</li>
         </ul>
         <button class="start-btn" @click="startGame">Start Game</button>
       </div>
@@ -63,6 +65,8 @@ import { loadDictionary, isValidWord } from '../constants/dictionary'
 import { getLetterColor } from './utils/letterColors'
 
 // Types
+type GemType = 'normal' | 'bomb' | 'multiply2x' | 'multiply3x'
+
 interface HexGem {
   id: string
   letter: string
@@ -70,14 +74,30 @@ interface HexGem {
   body: Matter.Body
   selected: boolean
   selectionOrder: number
+  gemType: GemType
 }
 
 // Constants
-const HEX_RADIUS = 35
+const HEX_RADIUS = 42
 const HEX_SPACING = 4
 const SPAWN_INTERVAL = 150
-const MAX_GEMS_ON_SCREEN = 60
+const MAX_GEMS_ON_SCREEN = 50
 const ASPECT_RATIO = 9 / 16 // Phone portrait aspect ratio
+const EXPLOSION_FORCE = 0.15
+const POP_DURATION = 200 // ms per gem pop
+const POP_STAGGER = 80 // ms delay between each gem pop
+
+// Special gem spawn chances (checked in order)
+const BOMB_CHANCE = 0.03      // 3% chance for bomb
+const MULTIPLY_3X_CHANCE = 0.02 // 2% chance for 3x multiplier
+const MULTIPLY_2X_CHANCE = 0.05 // 5% chance for 2x multiplier
+
+// Animation state
+interface PopAnimation {
+  gem: HexGem
+  startTime: number
+  delay: number
+}
 
 // Refs
 const containerRef = ref<HTMLElement | null>(null)
@@ -99,6 +119,7 @@ let animationFrameId: number
 let spawnTimeoutId: number | null = null
 let canvasWidth = 0
 let canvasHeight = 0
+let popAnimations: PopAnimation[] = []
 
 const gemsRemaining = computed(() => letterBag.length)
 
@@ -137,7 +158,7 @@ function getGemBorderColor(points: number, selected: boolean): string {
 }
 
 // Create a gem body
-function createGemBody(x: number, y: number, letter: string): HexGem {
+function createGemBody(x: number, y: number, letter: string, gemType: GemType = 'normal'): HexGem {
   const points = getLetterPoints(letter)
   const vertices = createHexagonVertices(HEX_RADIUS)
 
@@ -169,7 +190,8 @@ function createGemBody(x: number, y: number, letter: string): HexGem {
       points,
       body: circleBody,
       selected: false,
-      selectionOrder: -1
+      selectionOrder: -1,
+      gemType
     }
     return gem
   }
@@ -180,7 +202,8 @@ function createGemBody(x: number, y: number, letter: string): HexGem {
     points,
     body,
     selected: false,
-    selectionOrder: -1
+    selectionOrder: -1,
+    gemType
   }
 
   return gem
@@ -188,18 +211,42 @@ function createGemBody(x: number, y: number, letter: string): HexGem {
 
 // Spawn a new gem from the top
 function spawnGem() {
-  if (letterBag.length === 0 || gems.length >= MAX_GEMS_ON_SCREEN) {
-    if (letterBag.length === 0 && gems.length === 0) {
+  if (gems.length >= MAX_GEMS_ON_SCREEN) {
+    return
+  }
+
+  const x = HEX_RADIUS + Math.random() * (canvasWidth - HEX_RADIUS * 2)
+  const y = -HEX_RADIUS * 2
+
+  // Check for special gem spawns (don't use letters from bag)
+  const roll = Math.random()
+  if (roll < BOMB_CHANCE) {
+    const gem = createGemBody(x, y, '', 'bomb')
+    gems.push(gem)
+    Matter.Composite.add(engine.world, gem.body)
+    return
+  } else if (roll < BOMB_CHANCE + MULTIPLY_3X_CHANCE) {
+    const gem = createGemBody(x, y, '', 'multiply3x')
+    gems.push(gem)
+    Matter.Composite.add(engine.world, gem.body)
+    return
+  } else if (roll < BOMB_CHANCE + MULTIPLY_3X_CHANCE + MULTIPLY_2X_CHANCE) {
+    const gem = createGemBody(x, y, '', 'multiply2x')
+    gems.push(gem)
+    Matter.Composite.add(engine.world, gem.body)
+    return
+  }
+
+  // Normal letter gem
+  if (letterBag.length === 0) {
+    if (gems.length === 0) {
       endGame()
     }
     return
   }
 
   const letter = letterBag.pop()!
-  const x = HEX_RADIUS + Math.random() * (canvasWidth - HEX_RADIUS * 2)
-  const y = -HEX_RADIUS * 2
-
-  const gem = createGemBody(x, y, letter)
+  const gem = createGemBody(x, y, letter, 'normal')
   gems.push(gem)
   Matter.Composite.add(engine.world, gem.body)
 }
@@ -224,9 +271,12 @@ function areGemsAdjacent(gem1: HexGem, gem2: HexGem): boolean {
   return distance <= maxDistance
 }
 
-// Find gem at position
+// Find gem at position (skip animating gems)
 function getGemAtPosition(x: number, y: number): HexGem | null {
   for (const gem of gems) {
+    // Skip gems that are currently animating
+    if (popAnimations.some(a => a.gem === gem)) continue
+
     const dx = gem.body.position.x - x
     const dy = gem.body.position.y - y
     const distance = Math.sqrt(dx * dx + dy * dy)
@@ -265,9 +315,12 @@ function deselectLastGem() {
   updateCurrentWord()
 }
 
-// Update current word display
+// Update current word display (special gems don't contribute letters)
 function updateCurrentWord() {
-  currentWord.value = selectedGems.map(g => g.letter).join('')
+  currentWord.value = selectedGems
+    .filter(g => g.gemType === 'normal')
+    .map(g => g.letter)
+    .join('')
 }
 
 // Clear selection
@@ -300,6 +353,34 @@ function calculateWordScore(word: string): number {
   return basePoints * multiplier
 }
 
+// Trigger explosion from bomb gems
+function triggerExplosion(bombGem: HexGem) {
+  const explosionRadius = HEX_RADIUS * 4
+  const bombPos = bombGem.body.position
+
+  for (const gem of gems) {
+    if (gem === bombGem || gem.selected) continue
+
+    const dx = gem.body.position.x - bombPos.x
+    const dy = gem.body.position.y - bombPos.y
+    const distance = Math.sqrt(dx * dx + dy * dy)
+
+    if (distance < explosionRadius && distance > 0) {
+      // Calculate force direction (away from bomb)
+      const forceMultiplier = EXPLOSION_FORCE * (1 - distance / explosionRadius)
+      const force = {
+        x: (dx / distance) * forceMultiplier,
+        y: (dy / distance) * forceMultiplier - 0.05 // Add upward bias
+      }
+      Matter.Body.applyForce(gem.body, gem.body.position, force)
+
+      // Add some spin for dramatic effect
+      const torque = (Math.random() - 0.5) * 0.1
+      Matter.Body.setAngularVelocity(gem.body, gem.body.angularVelocity + torque)
+    }
+  }
+}
+
 // Submit word
 function submitWord() {
   const word = currentWord.value
@@ -315,8 +396,17 @@ function submitWord() {
     return
   }
 
-  // Valid word! Calculate score
-  const points = calculateWordScore(word)
+  // Valid word! Calculate score with multipliers
+  let basePoints = calculateWordScore(word)
+
+  // Apply multipliers from special gems (they stack!)
+  let totalMultiplier = 1
+  for (const gem of selectedGems) {
+    if (gem.gemType === 'multiply2x') totalMultiplier *= 2
+    if (gem.gemType === 'multiply3x') totalMultiplier *= 3
+  }
+
+  const points = basePoints * totalMultiplier
   score.value += points
 
   // Track top word
@@ -324,22 +414,34 @@ function submitWord() {
     topWord.value = { word, points }
   }
 
-  // Remove selected gems
-  for (const gem of selectedGems) {
-    Matter.Composite.remove(engine.world, gem.body)
-    const index = gems.indexOf(gem)
-    if (index > -1) {
-      gems.splice(index, 1)
-    }
+  // Sort selected gems by selection order for staggered pop
+  const sortedGems = [...selectedGems].sort((a, b) => a.selectionOrder - b.selectionOrder)
+
+  // Queue pop animations with staggered timing
+  const now = performance.now()
+  for (let i = 0; i < sortedGems.length; i++) {
+    const gem = sortedGems[i]!
+    // Make gem static so it doesn't move during animation
+    Matter.Body.setStatic(gem.body, true)
+    popAnimations.push({
+      gem,
+      startTime: now,
+      delay: i * POP_STAGGER
+    })
+  }
+
+  // Check for bomb gems - trigger explosions after a slight delay
+  const bombGems = selectedGems.filter(g => g.gemType === 'bomb')
+  if (bombGems.length > 0) {
+    setTimeout(() => {
+      for (const bomb of bombGems) {
+        triggerExplosion(bomb)
+      }
+    }, sortedGems.length * POP_STAGGER)
   }
 
   selectedGems = []
   currentWord.value = ''
-
-  // Check for game over
-  if (letterBag.length === 0 && gems.length === 0) {
-    endGame()
-  }
 }
 
 // End game
@@ -351,9 +453,17 @@ function endGame() {
   }
 }
 
+// Check if a gem is currently in pop animation
+function isGemAnimating(gem: HexGem): boolean {
+  return popAnimations.some(a => a.gem === gem)
+}
+
 // Custom render function for gems
 function renderGems(ctx: CanvasRenderingContext2D) {
   for (const gem of gems) {
+    // Skip gems that are currently animating (they're rendered separately)
+    if (isGemAnimating(gem)) continue
+
     const pos = gem.body.position
     const angle = gem.body.angle
 
@@ -375,19 +485,56 @@ function renderGems(ctx: CanvasRenderingContext2D) {
     }
     ctx.closePath()
 
-    // Fill
+    // Fill - use special colors for special gems
     const gradient = ctx.createLinearGradient(-HEX_RADIUS, -HEX_RADIUS, HEX_RADIUS, HEX_RADIUS)
-    const baseColor = getGemColor(gem.points, gem.selected)
-    const highlightColor = getGemBorderColor(gem.points, gem.selected)
-    gradient.addColorStop(0, baseColor)
-    gradient.addColorStop(1, highlightColor)
+    if (gem.selected) {
+      gradient.addColorStop(0, '#4fc3f7')
+      gradient.addColorStop(1, '#0288d1')
+    } else if (gem.gemType === 'bomb') {
+      gradient.addColorStop(0, '#ff6b35')
+      gradient.addColorStop(1, '#d32f2f')
+    } else if (gem.gemType === 'multiply3x') {
+      gradient.addColorStop(0, '#e040fb')
+      gradient.addColorStop(1, '#7b1fa2')
+    } else if (gem.gemType === 'multiply2x') {
+      gradient.addColorStop(0, '#69f0ae')
+      gradient.addColorStop(1, '#00c853')
+    } else {
+      const baseColor = getGemColor(gem.points, gem.selected)
+      const highlightColor = getGemBorderColor(gem.points, gem.selected)
+      gradient.addColorStop(0, baseColor)
+      gradient.addColorStop(1, highlightColor)
+    }
     ctx.fillStyle = gradient
     ctx.fill()
 
-    // Stroke
-    ctx.strokeStyle = gem.selected ? '#0288d1' : '#999'
-    ctx.lineWidth = gem.selected ? 3 : 2
+    // Stroke - special gems get glow effects
+    if (gem.selected) {
+      ctx.strokeStyle = '#0288d1'
+      ctx.lineWidth = 3
+      ctx.shadowBlur = 0
+    } else if (gem.gemType === 'bomb') {
+      ctx.strokeStyle = '#ffab00'
+      ctx.lineWidth = 3
+      ctx.shadowColor = '#ff6b35'
+      ctx.shadowBlur = 10
+    } else if (gem.gemType === 'multiply3x') {
+      ctx.strokeStyle = '#ea80fc'
+      ctx.lineWidth = 3
+      ctx.shadowColor = '#e040fb'
+      ctx.shadowBlur = 10
+    } else if (gem.gemType === 'multiply2x') {
+      ctx.strokeStyle = '#b9f6ca'
+      ctx.lineWidth = 3
+      ctx.shadowColor = '#69f0ae'
+      ctx.shadowBlur = 10
+    } else {
+      ctx.strokeStyle = '#999'
+      ctx.lineWidth = 2
+      ctx.shadowBlur = 0
+    }
     ctx.stroke()
+    ctx.shadowBlur = 0
 
     // Draw selection order indicator
     if (gem.selected && gem.selectionOrder >= 0) {
@@ -402,18 +549,33 @@ function renderGems(ctx: CanvasRenderingContext2D) {
       ctx.fillText((gem.selectionOrder + 1).toString(), HEX_RADIUS - 12, -HEX_RADIUS + 12)
     }
 
-    // Draw letter
     ctx.rotate(-angle) // Unrotate for text
-    ctx.fillStyle = gem.selected ? '#fff' : '#333'
-    ctx.font = `bold ${gem.letter.length > 1 ? 20 : 26}px Arial`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(gem.letter, 0, 0)
 
-    // Draw points
-    ctx.fillStyle = gem.selected ? '#e0e0e0' : '#666'
-    ctx.font = 'bold 12px Arial'
-    ctx.fillText(gem.points.toString(), 0, HEX_RADIUS - 14)
+    // Draw icon or letter based on gem type
+    if (gem.gemType === 'bomb') {
+      ctx.font = 'bold 28px Arial'
+      ctx.fillText('💣', 0, 0)
+    } else if (gem.gemType === 'multiply3x') {
+      ctx.fillStyle = '#fff'
+      ctx.font = 'bold 22px Arial'
+      ctx.fillText('×3', 0, 0)
+    } else if (gem.gemType === 'multiply2x') {
+      ctx.fillStyle = '#fff'
+      ctx.font = 'bold 22px Arial'
+      ctx.fillText('×2', 0, 0)
+    } else {
+      // Draw letter
+      ctx.fillStyle = gem.selected ? '#fff' : '#333'
+      ctx.font = `bold ${gem.letter.length > 1 ? 20 : 26}px Arial`
+      ctx.fillText(gem.letter, 0, 0)
+
+      // Draw points
+      ctx.fillStyle = gem.selected ? '#e0e0e0' : '#666'
+      ctx.font = 'bold 12px Arial'
+      ctx.fillText(gem.points.toString(), 0, HEX_RADIUS - 14)
+    }
 
     ctx.restore()
   }
@@ -438,6 +600,81 @@ function renderGems(ctx: CanvasRenderingContext2D) {
   }
 }
 
+// Render a popping gem with animation
+function renderPoppingGem(ctx: CanvasRenderingContext2D, anim: PopAnimation, progress: number) {
+  const gem = anim.gem
+  const pos = gem.body.position
+
+  // Easing function for pop effect (overshoot then shrink)
+  const easeOutBack = (t: number) => {
+    const c1 = 1.70158
+    const c3 = c1 + 1
+    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2)
+  }
+
+  // Scale up then down
+  let scale: number
+  if (progress < 0.3) {
+    // Scale up phase
+    scale = 1 + easeOutBack(progress / 0.3) * 0.3
+  } else {
+    // Shrink phase
+    const shrinkProgress = (progress - 0.3) / 0.7
+    scale = 1.3 * (1 - shrinkProgress)
+  }
+
+  const alpha = 1 - progress
+
+  ctx.save()
+  ctx.globalAlpha = alpha
+  ctx.translate(pos.x, pos.y)
+  ctx.scale(scale, scale)
+
+  // Draw hexagon
+  ctx.beginPath()
+  for (let i = 0; i < 6; i++) {
+    const hexAngle = (Math.PI / 3) * i - Math.PI / 6
+    const x = HEX_RADIUS * Math.cos(hexAngle)
+    const y = HEX_RADIUS * Math.sin(hexAngle)
+    if (i === 0) {
+      ctx.moveTo(x, y)
+    } else {
+      ctx.lineTo(x, y)
+    }
+  }
+  ctx.closePath()
+
+  // White flash effect
+  const flashIntensity = Math.max(0, 1 - progress * 3)
+  ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + flashIntensity * 0.7})`
+  ctx.fill()
+
+  ctx.strokeStyle = '#fff'
+  ctx.lineWidth = 3
+  ctx.stroke()
+
+  // Draw content
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillStyle = '#fff'
+
+  if (gem.gemType === 'bomb') {
+    ctx.font = 'bold 28px Arial'
+    ctx.fillText('💣', 0, 0)
+  } else if (gem.gemType === 'multiply3x') {
+    ctx.font = 'bold 22px Arial'
+    ctx.fillText('×3', 0, 0)
+  } else if (gem.gemType === 'multiply2x') {
+    ctx.font = 'bold 22px Arial'
+    ctx.fillText('×2', 0, 0)
+  } else {
+    ctx.font = `bold ${gem.letter.length > 1 ? 20 : 26}px Arial`
+    ctx.fillText(gem.letter, 0, 0)
+  }
+
+  ctx.restore()
+}
+
 // Main render loop
 function gameLoop() {
   if (!canvasRef.value) return
@@ -445,12 +682,44 @@ function gameLoop() {
   const ctx = canvasRef.value.getContext('2d')
   if (!ctx) return
 
+  const now = performance.now()
+
   // Clear canvas
   ctx.fillStyle = '#1a1a2e'
   ctx.fillRect(0, 0, canvasWidth, canvasHeight)
 
   // Render gems
   renderGems(ctx)
+
+  // Process and render pop animations
+  const completedAnims: PopAnimation[] = []
+  for (const anim of popAnimations) {
+    const elapsed = now - anim.startTime - anim.delay
+    if (elapsed < 0) {
+      // Not started yet, still render normally (it's static)
+      continue
+    }
+    const progress = Math.min(1, elapsed / POP_DURATION)
+    renderPoppingGem(ctx, anim, progress)
+
+    if (progress >= 1) {
+      completedAnims.push(anim)
+    }
+  }
+
+  // Remove completed animations and their gems
+  for (const anim of completedAnims) {
+    const animIndex = popAnimations.indexOf(anim)
+    if (animIndex > -1) {
+      popAnimations.splice(animIndex, 1)
+    }
+    // Remove gem from world and array
+    Matter.Composite.remove(engine.world, anim.gem.body)
+    const gemIndex = gems.indexOf(anim.gem)
+    if (gemIndex > -1) {
+      gems.splice(gemIndex, 1)
+    }
+  }
 
   // Remove gems that fell off screen
   const gemsToRemove = gems.filter(gem => gem.body.position.y > canvasHeight + HEX_RADIUS * 2)
@@ -462,8 +731,8 @@ function gameLoop() {
     }
   }
 
-  // Check for game over
-  if (letterBag.length === 0 && gems.length === 0 && !gameOver.value) {
+  // Check for game over (only when no animations pending)
+  if (letterBag.length === 0 && gems.length === 0 && popAnimations.length === 0 && !gameOver.value) {
     endGame()
   }
 
