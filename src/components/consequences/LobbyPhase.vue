@@ -1,10 +1,36 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useQuasar } from 'quasar'
 import { useConsequencesStore } from '../../stores/consequencesStore'
+import { testGeminiConnection } from '../../services/storyGenerator'
 
+const $q = useQuasar()
 const store = useConsequencesStore()
 
 const playerNames = ref<string[]>(['', ''])
+const testingApi = ref(false)
+
+async function testGemini() {
+  testingApi.value = true
+  try {
+    const response = await testGeminiConnection()
+    $q.notify({
+      type: 'positive',
+      message: 'Gemini API connected!',
+      caption: response.substring(0, 100) + '...',
+      timeout: 5000,
+    })
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: 'Gemini API Error',
+      caption: error instanceof Error ? error.message : 'Unknown error',
+      timeout: 10000,
+    })
+  } finally {
+    testingApi.value = false
+  }
+}
 
 function addPlayer() {
   if (playerNames.value.length < 8) {
@@ -103,6 +129,18 @@ const validPlayerCount = () =>
         <li>Chaos escalates each round. By round 5, expect callbacks to everything.</li>
       </ol>
     </q-card>
+
+    <!-- Debug: Test Gemini API -->
+    <q-btn
+      flat
+      size="sm"
+      color="grey"
+      icon="bug_report"
+      label="Test Gemini API"
+      class="q-mt-lg"
+      :loading="testingApi"
+      @click="testGemini"
+    />
   </div>
 </template>
 

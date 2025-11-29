@@ -126,5 +126,30 @@ export async function generateStory(context: StoryGenerationContext): Promise<st
   return await callGemini(NARRATOR_SYSTEM_PROMPT, userPrompt)
 }
 
+// Test connection to Gemini API
+export async function testGeminiConnection(): Promise<string> {
+  const client = getClient()
+  const model = 'gemini-2.0-flash'
+
+  const contents = [
+    {
+      role: 'user' as const,
+      parts: [{ text: 'Say "Gemini API connected successfully!" in a deadpan corporate memo style. One sentence only.' }]
+    }
+  ]
+
+  const response = await client.models.generateContentStream({
+    model,
+    contents
+  })
+
+  let fullText = ''
+  for await (const chunk of response) {
+    fullText += chunk.text || ''
+  }
+
+  return fullText.trim()
+}
+
 // Export for testing/debugging
 export { buildPrompt, NARRATOR_SYSTEM_PROMPT }
