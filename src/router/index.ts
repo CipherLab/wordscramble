@@ -31,6 +31,12 @@ const router = createRouter({
       name: 'consequences',
       component: EmptyComponent,
       meta: { mode: 'consequences' }
+    },
+    {
+      path: '/arclight',
+      name: 'arclight',
+      component: EmptyComponent,
+      meta: { mode: 'arclight' }
     }
   ]
 })
