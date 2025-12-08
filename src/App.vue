@@ -7,6 +7,7 @@ import { loadDictionary } from './constants/dictionary'
 import GameBoard from './components/GameBoard.vue'
 import HexGemGame from './components/HexGemGame.vue'
 import ConsequencesGame from './components/consequences/ConsequencesGame.vue'
+import ArcLightGame from './components/arclight/ArcLightGame.vue'
 import DailyLeaderboard from './components/DailyLeaderboard.vue'
 import type { GameMode } from './stores/gameStore'
 
@@ -18,6 +19,7 @@ const dictionaryError = ref<string | null>(null)
 const showLeaderboardDialog = ref(false)
 const isHexMode = ref(false)
 const isConsequencesMode = ref(false)
+const isArcLightMode = ref(false)
 
 // Dark mode setup
 const isDarkMode = ref($q.dark.isActive)
@@ -41,8 +43,9 @@ onMounted(async () => {
     // Check mode
     isHexMode.value = route.meta.mode === 'hex'
     isConsequencesMode.value = route.meta.mode === 'consequences'
+    isArcLightMode.value = route.meta.mode === 'arclight'
     // Start game based on current route (only for word scramble modes)
-    if (!isHexMode.value && !isConsequencesMode.value) {
+    if (!isHexMode.value && !isConsequencesMode.value && !isArcLightMode.value) {
       const mode = (route.meta.mode as GameMode) || 'random'
       gameStore.startGame(mode)
     }
@@ -58,7 +61,8 @@ watch(() => route.path, () => {
   if (!dictionaryLoading.value && !dictionaryError.value) {
     isHexMode.value = route.meta.mode === 'hex'
     isConsequencesMode.value = route.meta.mode === 'consequences'
-    if (!isHexMode.value && !isConsequencesMode.value) {
+    isArcLightMode.value = route.meta.mode === 'arclight'
+    if (!isHexMode.value && !isConsequencesMode.value && !isArcLightMode.value) {
       const mode = (route.meta.mode as GameMode) || 'random'
       gameStore.startGame(mode)
     }
@@ -122,9 +126,17 @@ function formatDate(dateString: string): string {
           >
             <q-tooltip>Mad Libs: Consequences party game</q-tooltip>
           </q-btn>
+          <q-btn
+            flat
+            :outline="isArcLightMode"
+            label="Arc Light"
+            :to="'/arclight'"
+          >
+            <q-tooltip>State-driven narrative storytelling</q-tooltip>
+          </q-btn>
         </q-btn-group>
         <q-btn
-          v-if="gameStore.gameMode === 'daily' && !isHexMode && !isConsequencesMode"
+          v-if="gameStore.gameMode === 'daily' && !isHexMode && !isConsequencesMode && !isArcLightMode"
           flat
           round
           dense
@@ -134,7 +146,7 @@ function formatDate(dateString: string): string {
           <q-tooltip>View Leaderboard</q-tooltip>
         </q-btn>
         <q-btn
-          v-if="!isHexMode && !isConsequencesMode"
+          v-if="!isHexMode && !isConsequencesMode && !isArcLightMode"
           flat
           round
           dense
@@ -176,6 +188,7 @@ function formatDate(dateString: string): string {
         </div>
 
         <!-- Game Board -->
+        <ArcLightGame v-else-if="isArcLightMode" />
         <ConsequencesGame v-else-if="isConsequencesMode" />
         <HexGemGame v-else-if="isHexMode" />
         <GameBoard v-else />
