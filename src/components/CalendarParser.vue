@@ -17,6 +17,9 @@ const dateTo = ref('')
 const events = ref<CalendarEvent[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
+const showPasteDialog = ref(false)
+const pastedContent = ref('')
+const fileInput = ref<HTMLInputElement | null>(null)
 
 const columns = [
   { name: 'start', label: 'Start', field: 'start', sortable: true, format: (val: Date) => formatDateTime(val) },
@@ -124,7 +127,6 @@ async function fetchAndParse() {
   error.value = null
 
   try {
-    // Use a CORS proxy if needed, or fetch directly
     const response = await fetch(icsUrl.value)
     if (!response.ok) {
       throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`)
@@ -137,12 +139,69 @@ async function fetchAndParse() {
     }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to fetch calendar'
-    // If CORS error, suggest using a proxy
-    if (error.value.includes('CORS') || error.value.includes('fetch')) {
-      error.value += '. The calendar server may not allow cross-origin requests. Try downloading the .ics file and using a local URL.'
+    if (error.value.includes('NetworkError') || error.value.includes('CORS') || error.value.includes('fetch')) {
+      error.value += '. Try uploading a .ics file or pasting the content instead.'
     }
   } finally {
     loading.value = false
+  }
+}
+
+function handleFileUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (!input.files || input.files.length === 0) return
+
+  const file = input.files[0]
+  loading.value = true
+  error.value = null
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const content = e.target?.result as string
+    events.value = parseICS(content)
+    loading.value = false
+
+    if (events.value.length === 0) {
+      error.value = 'No events found in the calendar'
+    } else {
+      $q.notify({
+        message: `Loaded ${events.value.length} events from file`,
+        color: 'positive',
+        position: 'top'
+      })
+    }
+  }
+  reader.onerror = () => {
+    error.value = 'Failed to read file'
+    loading.value = false
+  }
+  reader.readAsText(file)
+
+  // Reset input so same file can be selected again
+  input.value = ''
+}
+
+function parsePastedContent() {
+  if (!pastedContent.value.trim()) {
+    error.value = 'Please paste ICS content'
+    return
+  }
+
+  loading.value = true
+  error.value = null
+  events.value = parseICS(pastedContent.value)
+  loading.value = false
+  showPasteDialog.value = false
+
+  if (events.value.length === 0) {
+    error.value = 'No events found in the pasted content'
+  } else {
+    $q.notify({
+      message: `Loaded ${events.value.length} events`,
+      color: 'positive',
+      position: 'top'
+    })
+    pastedContent.value = ''
   }
 }
 
@@ -244,11 +303,38 @@ function copyAsMarkdown() {
           <div class="col-12 col-md-2">
             <q-btn
               color="primary"
-              label="Parse"
+              label="Fetch URL"
               :loading="loading"
               @click="fetchAndParse"
               class="full-width"
               style="height: 56px;"
+            />
+          </div>
+        </div>
+        <div class="row q-col-gutter-md q-mt-sm">
+          <div class="col-auto">
+            <q-btn
+              outline
+              color="primary"
+              icon="upload_file"
+              label="Upload .ics file"
+              @click="fileInput?.click()"
+            />
+            <input
+              ref="fileInput"
+              type="file"
+              accept=".ics"
+              style="display: none"
+              @change="handleFileUpload"
+            />
+          </div>
+          <div class="col-auto">
+            <q-btn
+              outline
+              color="primary"
+              icon="content_paste"
+              label="Paste ICS content"
+              @click="showPasteDialog = true"
             />
           </div>
         </div>
@@ -285,6 +371,28 @@ function copyAsMarkdown() {
         </q-table>
       </q-card-section>
     </q-card>
+
+    <!-- Paste Dialog -->
+    <q-dialog v-model="showPasteDialog">
+      <q-card style="min-width: 500px; max-width: 800px;">
+        <q-card-section>
+          <div class="text-h6">Paste ICS Content</div>
+        </q-card-section>
+        <q-card-section>
+          <q-input
+            v-model="pastedContent"
+            type="textarea"
+            outlined
+            placeholder="Paste your .ics file content here (starts with BEGIN:VCALENDAR)"
+            :rows="12"
+          />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn color="primary" label="Parse" @click="parsePastedContent" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
