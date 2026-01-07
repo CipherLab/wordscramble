@@ -8,6 +8,8 @@ import GameBoard from './components/GameBoard.vue'
 import HexGemGame from './components/HexGemGame.vue'
 import ConsequencesGame from './components/consequences/ConsequencesGame.vue'
 import ArcLightGame from './components/arclight/ArcLightGame.vue'
+import CompanyResearch from './components/CompanyResearch.vue'
+import CalendarParser from './components/CalendarParser.vue'
 import DailyLeaderboard from './components/DailyLeaderboard.vue'
 import type { GameMode } from './stores/gameStore'
 
@@ -20,6 +22,8 @@ const showLeaderboardDialog = ref(false)
 const isHexMode = ref(false)
 const isConsequencesMode = ref(false)
 const isArcLightMode = ref(false)
+const isResearchMode = ref(false)
+const isCalendarMode = ref(false)
 
 // Dark mode setup
 const isDarkMode = ref($q.dark.isActive)
@@ -44,8 +48,10 @@ onMounted(async () => {
     isHexMode.value = route.meta.mode === 'hex'
     isConsequencesMode.value = route.meta.mode === 'consequences'
     isArcLightMode.value = route.meta.mode === 'arclight'
+    isResearchMode.value = route.meta.mode === 'research'
+    isCalendarMode.value = route.meta.mode === 'calendar'
     // Start game based on current route (only for word scramble modes)
-    if (!isHexMode.value && !isConsequencesMode.value && !isArcLightMode.value) {
+    if (!isHexMode.value && !isConsequencesMode.value && !isArcLightMode.value && !isResearchMode.value && !isCalendarMode.value) {
       const mode = (route.meta.mode as GameMode) || 'random'
       gameStore.startGame(mode)
     }
@@ -62,7 +68,9 @@ watch(() => route.path, () => {
     isHexMode.value = route.meta.mode === 'hex'
     isConsequencesMode.value = route.meta.mode === 'consequences'
     isArcLightMode.value = route.meta.mode === 'arclight'
-    if (!isHexMode.value && !isConsequencesMode.value && !isArcLightMode.value) {
+    isResearchMode.value = route.meta.mode === 'research'
+    isCalendarMode.value = route.meta.mode === 'calendar'
+    if (!isHexMode.value && !isConsequencesMode.value && !isArcLightMode.value && !isResearchMode.value && !isCalendarMode.value) {
       const mode = (route.meta.mode as GameMode) || 'random'
       gameStore.startGame(mode)
     }
@@ -134,9 +142,25 @@ function formatDate(dateString: string): string {
           >
             <q-tooltip>State-driven narrative storytelling</q-tooltip>
           </q-btn>
+          <q-btn
+            flat
+            :outline="isResearchMode"
+            label="Research"
+            :to="'/research'"
+          >
+            <q-tooltip>AI-powered company research</q-tooltip>
+          </q-btn>
+          <q-btn
+            flat
+            :outline="isCalendarMode"
+            label="Calendar"
+            :to="'/calendar'"
+          >
+            <q-tooltip>Parse ICS calendar files</q-tooltip>
+          </q-btn>
         </q-btn-group>
         <q-btn
-          v-if="gameStore.gameMode === 'daily' && !isHexMode && !isConsequencesMode && !isArcLightMode"
+          v-if="gameStore.gameMode === 'daily' && !isHexMode && !isConsequencesMode && !isArcLightMode && !isResearchMode && !isCalendarMode"
           flat
           round
           dense
@@ -146,7 +170,7 @@ function formatDate(dateString: string): string {
           <q-tooltip>View Leaderboard</q-tooltip>
         </q-btn>
         <q-btn
-          v-if="!isHexMode && !isConsequencesMode && !isArcLightMode"
+          v-if="!isHexMode && !isConsequencesMode && !isArcLightMode && !isResearchMode && !isCalendarMode"
           flat
           round
           dense
@@ -191,6 +215,8 @@ function formatDate(dateString: string): string {
         <ArcLightGame v-else-if="isArcLightMode" />
         <ConsequencesGame v-else-if="isConsequencesMode" />
         <HexGemGame v-else-if="isHexMode" />
+        <CompanyResearch v-else-if="isResearchMode" />
+        <CalendarParser v-else-if="isCalendarMode" />
         <GameBoard v-else />
       </q-page>
     </q-page-container>

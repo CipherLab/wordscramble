@@ -13,4 +13,14 @@ export default defineConfig({
     }),
     quasar()
   ],
+  server: {
+    proxy: {
+      // Proxy n8n webhook requests to avoid CORS issues during development
+      '/api/n8n': {
+        target: 'http://192.168.2.36:5678',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/n8n/, ''),
+      },
+    },
+  },
 })

@@ -37,6 +37,18 @@ const router = createRouter({
       name: 'arclight',
       component: EmptyComponent,
       meta: { mode: 'arclight' }
+    },
+    {
+      path: '/research',
+      name: 'research',
+      component: EmptyComponent,
+      meta: { mode: 'research' }
+    },
+    {
+      path: '/calendar',
+      name: 'calendar',
+      component: EmptyComponent,
+      meta: { mode: 'calendar' }
     }
   ]
 })
