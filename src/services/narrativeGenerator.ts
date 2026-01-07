@@ -193,8 +193,7 @@ async function callGemini(systemPrompt: string, userPrompt: string): Promise<str
   try {
     const response = await client.models.generateContent({
       model: 'gemini-2.0-flash',
-      systemInstruction: systemPrompt,
-      contents: userPrompt,
+      contents: `${systemPrompt}\n\n${userPrompt}`,
       config: {
         responseMimeType: 'application/json',
         temperature: 0.8, // Creativity dial

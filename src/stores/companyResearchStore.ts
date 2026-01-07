@@ -52,9 +52,11 @@ export const useCompanyResearchStore = defineStore('companyResearch', () => {
     message?: string
   ) {
     const stepIndex = progress.value.findIndex((p) => p.step === step)
-    if (stepIndex !== -1) {
+    const existing = progress.value[stepIndex]
+    if (stepIndex !== -1 && existing) {
       progress.value[stepIndex] = {
-        ...progress.value[stepIndex],
+        step: existing.step,
+        label: existing.label,
         status,
         message,
       }

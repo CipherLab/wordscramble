@@ -102,8 +102,7 @@ Output ONLY the JSON with the choices array.
   try {
     const response = await client.models.generateContent({
       model: 'gemini-2.0-flash',
-      systemInstruction: CHOICE_GENERATION_PROMPT,
-      contents: userPrompt,
+      contents: `${CHOICE_GENERATION_PROMPT}\n\n${userPrompt}`,
       config: {
         responseMimeType: 'application/json',
         temperature: 0.9, // Higher creativity for variety
@@ -151,8 +150,8 @@ function getIconForType(type: string): string {
 }
 
 function getFallbackChoices(
-  currentState: NarrativeState,
-  goalTemplate: GoalTemplate
+  _currentState: NarrativeState,
+  _goalTemplate: GoalTemplate
 ): ActionChoice[] {
   // Generic fallback choices
   return [

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { NarrativeState, Character } from '../../types/arclight'
+import type { NarrativeState } from '../../types/arclight'
 
 // ============================================================================
 // PROPS
@@ -50,11 +50,14 @@ const pathData = computed(() => {
   if (positions.length === 0) return ''
 
   // Create smooth curved path through nodes
-  let path = `M ${positions[0].x} ${positions[0].y}`
+  const first = positions[0]
+  if (!first) return ''
+  let path = `M ${first.x} ${first.y}`
 
   for (let i = 1; i < positions.length; i++) {
     const prev = positions[i - 1]
     const curr = positions[i]
+    if (!prev || !curr) continue
 
     // Control point for bezier curve
     const cpX = (prev.x + curr.x) / 2
@@ -71,11 +74,14 @@ const completedPathData = computed(() => {
   const positions = nodePositions.value.slice(0, props.currentTurn + 1)
   if (positions.length < 2) return ''
 
-  let path = `M ${positions[0].x} ${positions[0].y}`
+  const first = positions[0]
+  if (!first) return ''
+  let path = `M ${first.x} ${first.y}`
 
   for (let i = 1; i < positions.length; i++) {
     const prev = positions[i - 1]
     const curr = positions[i]
+    if (!prev || !curr) continue
     const cpX = (prev.x + curr.x) / 2
     path += ` Q ${cpX} ${prev.y - 20}, ${curr.x} ${curr.y}`
   }
@@ -99,7 +105,7 @@ const characterPositions = computed(() => {
 function getNodeIcon(turn: number): string {
   // Vary icons based on turn for visual interest
   const icons = ['🏛️', '🌲', '📚', '🗝️', '⚔️', '👑', '🔮', '🎭']
-  return icons[(turn - 1) % icons.length]
+  return icons[(turn - 1) % icons.length] ?? '📍'
 }
 </script>
 
@@ -171,7 +177,7 @@ function getNodeIcon(turn: number): string {
       </g>
 
       <!-- Character avatars -->
-      <g v-for="(char, index) in characterPositions" :key="char.id">
+      <g v-for="char in characterPositions" :key="char.id">
         <!-- Avatar background circle -->
         <circle
           :cx="char.x + char.offsetX"

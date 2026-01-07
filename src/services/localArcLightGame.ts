@@ -87,9 +87,11 @@ export function createLocalGame(
   }
 
   // Create game
+  const hostPlayer = players[0]
+  if (!hostPlayer) throw new Error('No players provided')
   currentGame = {
     id: `local-${Date.now()}`,
-    hostId: players[0].id,
+    hostId: hostPlayer.id,
     createdAt: Date.now(),
     players,
     goalTemplate,

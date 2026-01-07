@@ -149,9 +149,8 @@ async function fetchAndParse() {
 
 function handleFileUpload(event: Event) {
   const input = event.target as HTMLInputElement
-  if (!input.files || input.files.length === 0) return
-
-  const file = input.files[0]
+  const file = input.files?.[0]
+  if (!file) return
   loading.value = true
   error.value = null
 
