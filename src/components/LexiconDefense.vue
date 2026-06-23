@@ -103,6 +103,11 @@ const FIELD_W = 380
 const FIELD_H = 640
 const BASE_Y = FIELD_H - 28
 
+// A preview band above the field (negative y). Letters spawn at the top of it
+// as faint ghosts and fade to fully solid as they descend across the entry
+// line at y=0 — so you can see what's coming before it "officially" arrives.
+const PREVIEW = 80
+
 let _id = 1
 const nextId = () => _id++
 
@@ -233,7 +238,7 @@ function loop(now: number) {
       id: nextId(),
       char: ch,
       x: 0.08 + Math.random() * 0.84,
-      y: -20,
+      y: -PREVIEW,
       vy: 10 + Math.random() * 7 + diff * 0.15,
       selectedIdx: null,
       dying: false,
@@ -263,7 +268,9 @@ function loop(now: number) {
         }
       }
       if (nearest) {
-        const dmg = 18 + (LETTER_VALUES[L.char] || 0)
+        // A letter's Scrabble value (the number on its tile) IS the damage it
+        // deals — so rare high-value letters are the real threat.
+        const dmg = LETTER_VALUES[L.char] || 1
         nearest.hp = Math.max(0, nearest.hp - dmg)
         floaters.push({
           id: nextId(),
@@ -349,6 +356,8 @@ function svgPoint(e: PointerEvent): { x: number; y: number } {
   const svg = svgRef.value!
   const r = svg.getBoundingClientRect()
   const x = ((e.clientX - r.left) / r.width) * FIELD_W
+  // svg keeps a 0..FIELD_H viewport; taps above the field map to negative y,
+  // so off-field ghosts resolve correctly too.
   const y = ((e.clientY - r.top) / r.height) * FIELD_H
   return { x, y }
 }
@@ -470,6 +479,11 @@ function submitWord() {
 const barColor = (frac: number) =>
   frac > 0.5 ? C.phosphor : frac > 0.25 ? C.amber : C.red
 
+// Ghost -> solid as a letter falls through the preview band and crosses the
+// entry line (y=0), reaching full opacity just inside the field.
+const enterOpacity = (y: number) =>
+  Math.max(0, Math.min(1, (y + PREVIEW) / (PREVIEW + 10)))
+
 const fieldTransform = computed(
   () => `translate(${shakeX.value}px, ${shakeY.value}px)`
 )
@@ -511,7 +525,7 @@ const fieldTransform = computed(
           width="100%"
           height="100%"
           @pointerdown="onTapField"
-          :style="{ display: 'block', transform: fieldTransform }"
+          :style="{ display: 'block', overflow: 'visible', transform: fieldTransform }"
         >
           <!-- grid -->
           <line
@@ -564,8 +578,7 @@ const fieldTransform = computed(
           <g
             v-for="L in snapLetters"
             :key="L.id"
-            :opacity="L.dying ? 0.4 : 1"
-            :style="{ transition: L.dying ? 'opacity .15s' : undefined }"
+            :opacity="L.dying ? 0.4 : enterOpacity(L.y)"
           >
             <rect
               :x="L.x * FIELD_W - 18"
@@ -765,7 +778,7 @@ const fieldTransform = computed(
 .lexicon-root {
   min-height: calc(100vh - 50px);
   width: 100%;
-  background: radial-gradient(120% 80% at 50% 0%, #06251700 0%, #02110a 70%);
+  background: radial-gradient(120% 80% at 50% 0%, #000000 0%, #02110a 70%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -790,7 +803,8 @@ const fieldTransform = computed(
   position: relative;
   width: 100%;
   border-radius: 10px;
-  overflow: hidden;
+  /* Visible so letters can drift in from above the field's top edge. */
+  overflow: visible;
 }
 
 .lex-overlay {
