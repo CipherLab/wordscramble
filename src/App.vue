@@ -10,6 +10,7 @@ import ConsequencesGame from './components/consequences/ConsequencesGame.vue'
 import ArcLightGame from './components/arclight/ArcLightGame.vue'
 import CompanyResearch from './components/CompanyResearch.vue'
 import CalendarParser from './components/CalendarParser.vue'
+import LexiconDefense from './components/LexiconDefense.vue'
 import DailyLeaderboard from './components/DailyLeaderboard.vue'
 import type { GameMode } from './stores/gameStore'
 
@@ -24,6 +25,7 @@ const isConsequencesMode = ref(false)
 const isArcLightMode = ref(false)
 const isResearchMode = ref(false)
 const isCalendarMode = ref(false)
+const isLexiconMode = ref(false)
 
 // Dark mode setup
 const isDarkMode = ref($q.dark.isActive)
@@ -50,8 +52,9 @@ onMounted(async () => {
     isArcLightMode.value = route.meta.mode === 'arclight'
     isResearchMode.value = route.meta.mode === 'research'
     isCalendarMode.value = route.meta.mode === 'calendar'
+    isLexiconMode.value = route.meta.mode === 'lexicon'
     // Start game based on current route (only for word scramble modes)
-    if (!isHexMode.value && !isConsequencesMode.value && !isArcLightMode.value && !isResearchMode.value && !isCalendarMode.value) {
+    if (!isHexMode.value && !isConsequencesMode.value && !isArcLightMode.value && !isResearchMode.value && !isCalendarMode.value && !isLexiconMode.value) {
       const mode = (route.meta.mode as GameMode) || 'random'
       gameStore.startGame(mode)
     }
@@ -70,7 +73,8 @@ watch(() => route.path, () => {
     isArcLightMode.value = route.meta.mode === 'arclight'
     isResearchMode.value = route.meta.mode === 'research'
     isCalendarMode.value = route.meta.mode === 'calendar'
-    if (!isHexMode.value && !isConsequencesMode.value && !isArcLightMode.value && !isResearchMode.value && !isCalendarMode.value) {
+    isLexiconMode.value = route.meta.mode === 'lexicon'
+    if (!isHexMode.value && !isConsequencesMode.value && !isArcLightMode.value && !isResearchMode.value && !isCalendarMode.value && !isLexiconMode.value) {
       const mode = (route.meta.mode as GameMode) || 'random'
       gameStore.startGame(mode)
     }
@@ -158,9 +162,17 @@ function formatDate(dateString: string): string {
           >
             <q-tooltip>Parse ICS calendar files</q-tooltip>
           </q-btn>
+          <q-btn
+            flat
+            :outline="isLexiconMode"
+            label="Lexicon"
+            :to="'/lexicon'"
+          >
+            <q-tooltip>Lexicon Defense: spell falling letters to score</q-tooltip>
+          </q-btn>
         </q-btn-group>
         <q-btn
-          v-if="gameStore.gameMode === 'daily' && !isHexMode && !isConsequencesMode && !isArcLightMode && !isResearchMode && !isCalendarMode"
+          v-if="gameStore.gameMode === 'daily' && !isHexMode && !isConsequencesMode && !isArcLightMode && !isResearchMode && !isCalendarMode && !isLexiconMode"
           flat
           round
           dense
@@ -170,7 +182,7 @@ function formatDate(dateString: string): string {
           <q-tooltip>View Leaderboard</q-tooltip>
         </q-btn>
         <q-btn
-          v-if="!isHexMode && !isConsequencesMode && !isArcLightMode && !isResearchMode && !isCalendarMode"
+          v-if="!isHexMode && !isConsequencesMode && !isArcLightMode && !isResearchMode && !isCalendarMode && !isLexiconMode"
           flat
           round
           dense
@@ -217,6 +229,7 @@ function formatDate(dateString: string): string {
         <HexGemGame v-else-if="isHexMode" />
         <CompanyResearch v-else-if="isResearchMode" />
         <CalendarParser v-else-if="isCalendarMode" />
+        <LexiconDefense v-else-if="isLexiconMode" />
         <GameBoard v-else />
       </q-page>
     </q-page-container>

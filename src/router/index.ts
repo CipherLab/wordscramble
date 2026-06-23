@@ -49,6 +49,12 @@ const router = createRouter({
       name: 'calendar',
       component: EmptyComponent,
       meta: { mode: 'calendar' }
+    },
+    {
+      path: '/lexicon',
+      name: 'lexicon',
+      component: EmptyComponent,
+      meta: { mode: 'lexicon' }
     }
   ]
 })

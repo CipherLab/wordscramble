@@ -54,3 +54,31 @@ export function isValidWord(word: string): boolean {
 export function isDictionaryLoaded(): boolean {
   return VALID_WORDS !== null
 }
+
+// Cached pools of words bucketed by length range, built lazily on first use so
+// we don't materialize an array out of the 279k-word Set until something needs
+// to sample random words (e.g. the Lexicon Defense letter feed).
+const poolCache = new Map<string, string[]>()
+
+/**
+ * Return a random dictionary word whose length is within [minLen, maxLen],
+ * or null if the dictionary isn't loaded yet. Used to source coherent,
+ * scrambleable letter sets rather than purely random letters.
+ */
+export function getRandomWord(minLen = 3, maxLen = 7): string | null {
+  if (!VALID_WORDS) {
+    console.warn('Dictionary not loaded yet')
+    return null
+  }
+  const key = `${minLen}-${maxLen}`
+  let pool = poolCache.get(key)
+  if (!pool) {
+    pool = []
+    for (const w of VALID_WORDS) {
+      if (w.length >= minLen && w.length <= maxLen) pool.push(w)
+    }
+    poolCache.set(key, pool)
+  }
+  if (pool.length === 0) return null
+  return pool[Math.floor(Math.random() * pool.length)]!
+}
